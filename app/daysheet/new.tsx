@@ -7,13 +7,17 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
+  Platform,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import { ScreenContainer } from "@/components/screen-container";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { createDaySheet } from "@/lib/api/sharepoint";
+import { createDaySheet, uploadSitePhoto } from "@/lib/api/sharepoint";
 import { enqueue } from "@/lib/offline/queue";
 
 const ALLOWANCES = [
@@ -57,7 +61,9 @@ export default function NewDaySheetScreen() {
   const [breakMins, setBreakMins] = useState("30");
   const [selectedAllowances, setSelectedAllowances] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
+  const [photos, setPhotos] = useState<Array<{ uri: string; name: string }>>([]);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const { ordinary, overtime } = calculateHours(startTime, finishTime, Number(breakMins) || 0);
 
@@ -65,6 +71,48 @@ export default function NewDaySheetScreen() {
     setSelectedAllowances((prev) =>
       prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
     );
+  };
+
+  const takePhoto = async () => {
+    if (Platform.OS === "web") {
+      Alert.alert("Camera", "Camera capture is only available on iOS and Android.");
+      return;
+    }
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Camera access is needed to take site photos.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: false,
+      quality: 0.7,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      const name = `site-photo-${Date.now()}.jpg`;
+      setPhotos((prev) => [...prev, { uri: asset.uri, name }]);
+    }
+  };
+
+  const pickFromLibrary = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: false,
+      quality: 0.7,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+    });
+    if (!result.canceled) {
+      const newPhotos = result.assets.map((a, i) => ({
+        uri: a.uri,
+        name: `site-photo-${Date.now()}-${i}.jpg`,
+      }));
+      setPhotos((prev) => [...prev, ...newPhotos]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
@@ -75,6 +123,7 @@ export default function NewDaySheetScreen() {
     setSaving(true);
     const sheet = {
       jobCode: jobCode.trim(),
+      jobName: "",
       workerName: user?.displayName ?? "Unknown",
       workerEmail: user?.mail ?? "",
       date,
@@ -83,17 +132,43 @@ export default function NewDaySheetScreen() {
       breakMinutes: Number(breakMins) || 0,
       ordinaryHours: ordinary,
       overtimeHours: overtime,
-      allowances: selectedAllowances,
+      allowances: selectedAllowances.join("; "),
       notes,
       approvalStatus: "Pending" as const,
+      approvedBy: "",
+      approvedDate: "",
       payrollExportStatus: "Not Exported" as const,
+      xeroReference: "",
+      site: "",
+      trade: "",
     };
 
     try {
       await createDaySheet(sheet);
-      Alert.alert("Submitted", "Day sheet saved to SharePoint.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+
+      // Upload photos to SharePoint Site Photos library
+      if (photos.length > 0) {
+        setUploadingPhoto(true);
+        for (const photo of photos) {
+          try {
+            await uploadSitePhoto(
+              photo.uri,
+              jobCode.trim(),
+              user?.displayName ?? "Unknown",
+              date
+            );
+          } catch {
+            // Non-fatal — photos may fail individually
+          }
+        }
+        setUploadingPhoto(false);
+      }
+
+      Alert.alert(
+        "Submitted",
+        `Day sheet saved to SharePoint${photos.length > 0 ? ` with ${photos.length} photo(s)` : ""}.`,
+        [{ text: "OK", onPress: () => router.back() }]
+      );
     } catch {
       // Save offline
       await enqueue({ type: "CREATE_DAYSHEET", payload: sheet });
@@ -104,6 +179,7 @@ export default function NewDaySheetScreen() {
       );
     } finally {
       setSaving(false);
+      setUploadingPhoto(false);
     }
   };
 
@@ -180,7 +256,7 @@ export default function NewDaySheetScreen() {
           </View>
           <View style={styles.hoursRow}>
             <Text style={styles.hoursLabel}>Overtime Hours</Text>
-            <Text style={[styles.hoursValue, overtime > 0 && { color: "#D97706" }]}>
+            <Text style={[styles.hoursValue, overtime > 0 ? { color: "#D97706" } : {}]}>
               {overtime.toFixed(2)} hrs
             </Text>
           </View>
@@ -223,18 +299,74 @@ export default function NewDaySheetScreen() {
           textAlignVertical="top"
         />
 
+        {/* Site Photos */}
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Site Photos</Text>
+        <Text style={[styles.photoSubtitle, { color: colors.muted }]}>
+          Attach site photos or SWMS documents. Photos are uploaded to the SharePoint Site Photos library.
+        </Text>
+
+        {/* Photo thumbnails */}
+        {photos.length > 0 && (
+          <View style={styles.photoGrid}>
+            {photos.map((photo, index) => (
+              <View key={index} style={styles.photoThumb}>
+                <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+                <Pressable
+                  onPress={() => removePhoto(index)}
+                  style={styles.photoRemoveBtn}
+                >
+                  <Text style={styles.photoRemoveText}>✕</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Photo action buttons */}
+        <View style={styles.photoActions}>
+          {Platform.OS !== "web" && (
+            <Pressable
+              onPress={takePhoto}
+              style={({ pressed }) => [
+                styles.photoBtn,
+                { backgroundColor: "#1B2A4A", opacity: pressed ? 0.8 : 1 },
+              ]}
+            >
+              <IconSymbol name="camera.fill" size={18} color="#fff" />
+              <Text style={styles.photoBtnText}>Take Photo</Text>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={pickFromLibrary}
+            style={({ pressed }) => [
+              styles.photoBtn,
+              { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, opacity: pressed ? 0.8 : 1 },
+            ]}
+          >
+            <IconSymbol name="photo.fill" size={18} color={colors.foreground} />
+            <Text style={[styles.photoBtnText, { color: colors.foreground }]}>Choose from Library</Text>
+          </Pressable>
+        </View>
+
         <Pressable
           onPress={handleSubmit}
-          disabled={saving}
+          disabled={saving || uploadingPhoto}
           style={({ pressed }) => [
             styles.submitBtn,
-            { backgroundColor: "#1B2A4A", opacity: pressed || saving ? 0.8 : 1 },
+            { backgroundColor: "#1B2A4A", opacity: pressed || saving || uploadingPhoto ? 0.8 : 1 },
           ]}
         >
-          {saving ? (
-            <ActivityIndicator color="#fff" />
+          {saving || uploadingPhoto ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <ActivityIndicator color="#fff" />
+              <Text style={styles.submitBtnText}>
+                {uploadingPhoto ? "Uploading photos…" : "Saving…"}
+              </Text>
+            </View>
           ) : (
-            <Text style={styles.submitBtnText}>Submit Day Sheet</Text>
+            <Text style={styles.submitBtnText}>
+              Submit Day Sheet{photos.length > 0 ? ` + ${photos.length} Photo${photos.length > 1 ? "s" : ""}` : ""}
+            </Text>
           )}
         </Pressable>
       </ScrollView>
@@ -326,6 +458,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Montserrat_400Regular",
     minHeight: 100,
+  },
+  photoSubtitle: {
+    fontSize: 13,
+    fontFamily: "Montserrat_400Regular",
+    lineHeight: 18,
+    marginTop: -8,
+  },
+  photoGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  photoThumb: {
+    width: 90,
+    height: 90,
+    borderRadius: 10,
+    overflow: "hidden",
+    position: "relative",
+  },
+  photoImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  photoRemoveBtn: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoRemoveText: {
+    color: "#fff",
+    fontSize: 11,
+    fontFamily: "Montserrat_700Bold",
+  },
+  photoActions: {
+    flexDirection: "row",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  photoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  photoBtnText: {
+    fontSize: 14,
+    fontFamily: "Montserrat_600SemiBold",
+    color: "#fff",
   },
   submitBtn: {
     padding: 16,

@@ -14,6 +14,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { getSubcontractors, updateSubcontractorMobilisation, type Subcontractor } from "@/lib/api/sharepoint";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 const COMPLIANCE_COLORS: Record<string, { bg: string; text: string; icon: any }> = {
   Active: { bg: "#DCFCE7", text: "#16A34A", icon: "checkmark.circle.fill" },
@@ -54,6 +55,7 @@ function StatusBadge({ label, value }: { label: string; value: string }) {
 export default function SubcontractorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
+  const { isSupervisor } = useAuth();
   const [sub, setSub] = useState<Subcontractor | null>(null);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
@@ -125,7 +127,9 @@ export default function SubcontractorDetailScreen() {
               Mobilisation {sub.mobilisationApproved ? "Approved" : "Not Approved"}
             </Text>
             <Text style={styles.mobilisationSubtitle}>
-              {sub.complianceStatus === "Blocked"
+              {!isSupervisor
+                ? "Supervisor access required"
+                : sub.complianceStatus === "Blocked"
                 ? "Resolve compliance issues first"
                 : "Toggle to approve/revoke mobilisation"}
             </Text>
@@ -133,7 +137,7 @@ export default function SubcontractorDetailScreen() {
           <Switch
             value={sub.mobilisationApproved}
             onValueChange={handleToggleMobilisation}
-            disabled={toggling || sub.complianceStatus === "Blocked"}
+            disabled={toggling || sub.complianceStatus === "Blocked" || !isSupervisor}
             trackColor={{ false: "#E2E8F0", true: "#16A34A" }}
             thumbColor={sub.mobilisationApproved ? "#fff" : "#94A3B8"}
           />

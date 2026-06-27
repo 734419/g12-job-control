@@ -18,6 +18,7 @@ export default function NewSubcontractorScreen() {
     contactEmail: "",
     insuranceExpiry: "",
     licenceExpiry: "",
+    licenceNumber: "",
   });
 
   const update = (key: keyof typeof form) => (value: string) =>
@@ -32,6 +33,7 @@ export default function NewSubcontractorScreen() {
     try {
       await createSubcontractor({
         ...form,
+        licenceNumber: form.licenceNumber ?? "",
         inductionStatus: "Not Started",
         swmsStatus: "Not Submitted",
         prequalificationStatus: "Not Started",

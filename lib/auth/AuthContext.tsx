@@ -11,14 +11,22 @@ import {
   clearTokens,
   type MSUser,
 } from "./microsoft";
+import { checkIsSupervisor } from "@/lib/api/sharepoint";
 
 WebBrowser.maybeCompleteAuthSession();
 
 interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** True when the role check is still in progress after sign-in */
+  isRoleLoading: boolean;
   user: MSUser | null;
   accessToken: string | null;
+  /**
+   * True if the signed-in user is a member of the "G12 Job Control" M365 group.
+   * Members of this group can approve day sheets and toggle mobilisation.
+   */
+  isSupervisor: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   error: string | null;
@@ -27,8 +35,10 @@ interface AuthState {
 const AuthContext = createContext<AuthState>({
   isAuthenticated: false,
   isLoading: true,
+  isRoleLoading: false,
   user: null,
   accessToken: null,
+  isSupervisor: false,
   signIn: async () => {},
   signOut: async () => {},
   error: null,
@@ -37,8 +47,10 @@ const AuthContext = createContext<AuthState>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRoleLoading, setIsRoleLoading] = useState(false);
   const [user, setUser] = useState<MSUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isSupervisor, setIsSupervisor] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // On web, use the current origin + /oauth/callback so Azure AD can redirect back.
@@ -46,6 +58,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const redirectUri = Platform.OS === "web"
     ? AuthSession.makeRedirectUri({ path: "oauth/callback" })
     : AuthSession.makeRedirectUri({ scheme: "manus20260626125759", path: "auth" });
+
+  /** Check M365 group membership and cache the result */
+  const loadRole = useCallback(async () => {
+    setIsRoleLoading(true);
+    try {
+      const supervisor = await checkIsSupervisor();
+      setIsSupervisor(supervisor);
+    } catch {
+      setIsSupervisor(false);
+    } finally {
+      setIsRoleLoading(false);
+    }
+  }, []);
 
   // Restore session on mount
   useEffect(() => {
@@ -59,6 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setAccessToken(token);
           setUser(storedUser);
           setIsAuthenticated(true);
+          // Load role in background — don't block the session restore
+          loadRole();
         }
       } catch {
         // ignore
@@ -66,15 +93,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     })();
-  }, []);
+  }, [loadRole]);
 
   const signIn = useCallback(async () => {
     setError(null);
     setIsLoading(true);
     try {
       const request = buildAuthRequest(redirectUri);
-      await request.makeAuthUrlAsync({ authorizationEndpoint: `https://login.microsoftonline.com/${process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "common"}/oauth2/v2.0/authorize` });
-      const result = await request.promptAsync({ authorizationEndpoint: `https://login.microsoftonline.com/${process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "common"}/oauth2/v2.0/authorize` });
+      await request.makeAuthUrlAsync({
+        authorizationEndpoint: `https://login.microsoftonline.com/${process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "common"}/oauth2/v2.0/authorize`,
+      });
+      const result = await request.promptAsync({
+        authorizationEndpoint: `https://login.microsoftonline.com/${process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "common"}/oauth2/v2.0/authorize`,
+      });
 
       if (result.type === "success" && result.params.code) {
         const bundle = await exchangeCodeForToken(
@@ -86,6 +117,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAccessToken(bundle.accessToken);
         setUser(msUser);
         setIsAuthenticated(true);
+        // Load role after successful sign-in
+        loadRole();
       } else if (result.type === "error") {
         setError(result.error?.message ?? "Sign in failed");
       }
@@ -94,18 +127,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [redirectUri]);
+  }, [redirectUri, loadRole]);
 
   const signOut = useCallback(async () => {
     await clearTokens();
     setIsAuthenticated(false);
     setUser(null);
     setAccessToken(null);
+    setIsSupervisor(false);
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, isLoading, user, accessToken, signIn, signOut, error }}
+      value={{
+        isAuthenticated,
+        isLoading,
+        isRoleLoading,
+        user,
+        accessToken,
+        isSupervisor,
+        signIn,
+        signOut,
+        error,
+      }}
     >
       {children}
     </AuthContext.Provider>

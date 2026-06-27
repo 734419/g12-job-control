@@ -149,7 +149,7 @@ export default function JobsScreen() {
               ) : null}
               <View style={styles.jobFooter}>
                 <Text style={[styles.jobSupervisor, { color: colors.muted }]}>
-                  Supervisor: {item.supervisor || "—"}
+                  PM: {item.projectManager || "—"}
                 </Text>
                 <IconSymbol name="chevron.right" size={16} color={colors.muted} />
               </View>

@@ -35,7 +35,7 @@ export default function DaySheetDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isSupervisor } = useAuth();
   const [sheet, setSheet] = useState<DaySheet | null>(null);
   const [loading, setLoading] = useState(true);
   const [actioning, setActioning] = useState(false);
@@ -126,9 +126,9 @@ export default function DaySheetDetailScreen() {
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <Text style={[styles.cardTitle, { color: colors.foreground }]}>Details</Text>
           <InfoRow label="Worker Email" value={sheet.workerEmail} />
-          {sheet.allowances.length > 0 && (
-            <InfoRow label="Allowances" value={sheet.allowances.join(", ")} />
-          )}
+          {sheet.allowances ? (
+            <InfoRow label="Allowances" value={sheet.allowances} />
+          ) : null}
           {sheet.notes && <InfoRow label="Notes" value={sheet.notes} />}
         </View>
 
@@ -141,8 +141,8 @@ export default function DaySheetDetailScreen() {
           {sheet.approvedDate && <InfoRow label="Approved Date" value={sheet.approvedDate} />}
         </View>
 
-        {/* Approval actions */}
-        {sheet.approvalStatus === "Pending" && (
+        {/* Approval actions — supervisor only */}
+        {sheet.approvalStatus === "Pending" && isSupervisor && (
           <View style={styles.actions}>
             <Pressable
               onPress={handleApprove}

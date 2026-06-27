@@ -59,3 +59,16 @@
 - [x] EXPO_PUBLIC_AZURE_CLIENT_ID set (G12-PnP-SharePoint-Access)
 - [x] EXPO_PUBLIC_AZURE_TENANT_ID set (G12 Consulting tenant)
 - [x] Mobile redirect URI registered in Entra ID
+
+## Phase 2 Enhancements
+
+- [x] Fetch real SharePoint list column names via Graph API
+- [x] Update lib/api/sharepoint.ts with real column mappings (Job Register, Subcontractor Register)
+- [x] Add camera/photo capture to Day Sheets screen (expo-image-picker)
+- [x] Upload captured photos to SharePoint Site Photos library
+- [x] Add M365 group membership check (G12 Job Control group via /memberOf)
+- [x] Gate day sheet approval behind isSupervisor role
+- [x] Gate subcontractor mobilisation toggle behind isSupervisor role
+- [x] Add isSupervisor flag to AuthContext with background role loading
+- [x] Add camera/photo permissions to app.config.ts
+- [x] Day Sheets list schema defined (to be created manually in SharePoint — see delivery notes)

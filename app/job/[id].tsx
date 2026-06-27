@@ -88,7 +88,7 @@ export default function JobDetailScreen() {
           <InfoRow label="Client" value={job.client} icon="building.2.fill" />
           <InfoRow label="Site Address" value={job.siteAddress} icon="location.fill" />
           <InfoRow label="Start Date" value={job.startDate} icon="calendar" />
-          <InfoRow label="Supervisor" value={job.supervisor} icon="person.fill" />
+          <InfoRow label="Project Manager" value={job.projectManager} icon="person.fill" />
           {job.description ? (
             <InfoRow label="Description" value={job.description} />
           ) : null}

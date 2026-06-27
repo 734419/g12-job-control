@@ -42,6 +42,9 @@ const MAPPING = {
   "doc.badge.plus": "note-add",
   "tray.full.fill": "inbox",
   "chart.bar.fill": "bar-chart",
+  "camera.fill": "camera-alt",
+  "photo.fill": "photo-library",
+  "trash.fill": "delete",
 } as IconMapping;
 
 export function IconSymbol({

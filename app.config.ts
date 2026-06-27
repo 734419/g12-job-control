@@ -59,6 +59,13 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     [
+      "expo-image-picker",
+      {
+        photosPermission: "Allow G12 Job Control to access your photos to attach site photos to day sheets.",
+        cameraPermission: "Allow G12 Job Control to take site photos for day sheets.",
+      },
+    ],
+    [
       "expo-audio",
       { microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone." },
     ],
