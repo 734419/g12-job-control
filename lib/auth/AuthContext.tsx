@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
+import { Platform } from "react-native";
 import {
   buildAuthRequest,
   exchangeCodeForToken,
@@ -40,7 +41,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const redirectUri = AuthSession.makeRedirectUri({ scheme: "manus20260626" });
+  // On web, use the current origin + /oauth/callback so Azure AD can redirect back.
+  // On native (iOS/Android), use the custom scheme registered in Entra.
+  const redirectUri = Platform.OS === "web"
+    ? AuthSession.makeRedirectUri({ path: "oauth/callback" })
+    : AuthSession.makeRedirectUri({ scheme: "manus20260626125759", path: "auth" });
 
   // Restore session on mount
   useEffect(() => {
