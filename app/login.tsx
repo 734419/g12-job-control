@@ -1,9 +1,11 @@
-import { View, Text, Image, Pressable, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, Image, Pressable, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useColors } from "@/hooks/use-colors";
+import * as AuthSession from "expo-auth-session";
+import Constants from "expo-constants";
 
 export default function LoginScreen() {
   const { signIn, isLoading, isAuthenticated, error } = useAuth();
@@ -72,6 +74,18 @@ export default function LoginScreen() {
       <Text style={styles.footer}>
         G12 Group · Secure access via Azure AD
       </Text>
+      {/* DEBUG: Show redirect URI so we can register it in Azure */}
+      {__DEV__ && (
+        <View style={{ marginTop: 12, paddingHorizontal: 16 }}>
+          <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, fontFamily: "Montserrat_400Regular", textAlign: "center" }}>
+            Redirect URI: {Platform.OS === "web"
+              ? AuthSession.makeRedirectUri({ path: "oauth/callback" })
+              : Constants.appOwnership === "expo"
+                ? AuthSession.makeRedirectUri({ scheme: "exp", isTripleSlashed: true })
+                : AuthSession.makeRedirectUri({ scheme: "manus20260626", path: "auth" })}
+          </Text>
+        </View>
+      )}
     </ScreenContainer>
   );
 }

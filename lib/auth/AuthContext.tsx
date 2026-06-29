@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 import {
   buildAuthRequest,
   exchangeCodeForToken,
@@ -53,11 +54,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // On web, use the current origin + /oauth/callback so Azure AD can redirect back.
-  // On native (iOS/Android), use the custom scheme registered in Entra.
+  // Build the correct redirect URI for each platform/environment:
+  //   Web            → https://<host>/oauth/callback  (SPA flow)
+  //   Expo Go        → exp://<metro-host>             (registered in Azure as Mobile/Desktop)
+  //   Standalone app → manus20260626://auth           (custom scheme, registered in Azure iOS/macOS)
+  const isExpoGo = Constants.appOwnership === "expo";
   const redirectUri = Platform.OS === "web"
     ? AuthSession.makeRedirectUri({ path: "oauth/callback" })
-    : AuthSession.makeRedirectUri({ scheme: "manus20260626125759", path: "auth" });
+    : isExpoGo
+      ? AuthSession.makeRedirectUri({ scheme: "exp", isTripleSlashed: true })
+      : AuthSession.makeRedirectUri({ scheme: "manus20260626", path: "auth" });
 
   /** Check M365 group membership and cache the result */
   const loadRole = useCallback(async () => {
