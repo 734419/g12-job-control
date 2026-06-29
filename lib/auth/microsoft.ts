@@ -13,6 +13,8 @@
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
+import { getApiBaseUrl } from "@/constants/oauth";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -71,6 +73,33 @@ export async function exchangeCodeForToken(
   codeVerifier: string,
   redirectUri: string
 ): Promise<TokenBundle> {
+  // On web, the SPA flow allows direct token exchange (PKCE, no CORS restriction).
+  // On mobile (Expo Go / native), Microsoft blocks direct fetch with AADSTS9002326,
+  // so we proxy the exchange through our own server.
+  if (Platform.OS !== "web") {
+    // On mobile (Expo Go), window.location is not available so getApiBaseUrl() returns empty.
+    // Use the known Manus sandbox API server URL directly.
+    const apiBase = "https://3000-ia7j6j1amjoucogwn0wp5-c64336ba.sg1.manus.computer";
+    const res = await fetch(`${apiBase}/api/auth/token-exchange`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, codeVerifier, redirectUri }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Token exchange failed: ${err}`);
+    }
+    const data = await res.json() as any;
+    const bundle: TokenBundle = {
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      expiresAt: data.expiresAt,
+    };
+    await storeTokens(bundle);
+    return bundle;
+  }
+
+  // Web: direct PKCE exchange
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     code,
@@ -91,19 +120,22 @@ export async function exchangeCodeForToken(
     throw new Error(`Token exchange failed: ${err}`);
   }
 
-  const data = await res.json();
+  const data = await res.json() as any;
   const bundle: TokenBundle = {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAt: Date.now() + data.expires_in * 1000,
   };
 
+  await storeTokens(bundle);
+  return bundle;
+}
+
+async function storeTokens(bundle: TokenBundle) {
   await SecureStore.setItemAsync(TOKEN_KEY, bundle.accessToken);
   if (bundle.refreshToken) {
     await SecureStore.setItemAsync(REFRESH_KEY, bundle.refreshToken);
   }
-
-  return bundle;
 }
 
 export async function refreshAccessToken(): Promise<string | null> {
