@@ -48,6 +48,7 @@ const MAPPING = {
   "arrow.up.doc.fill": "upload-file",
   "checkmark.square.fill": "check-box",
   "square": "check-box-outline-blank",
+  "arrow.up.right.square": "open-in-new",
 } as IconMapping;
 
 export function IconSymbol({

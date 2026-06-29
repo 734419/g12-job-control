@@ -32,6 +32,32 @@ import { getStoredToken, refreshAccessToken } from "@/lib/auth/microsoft";
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 
+// ─── Demo Data (fallback when SharePoint is not yet configured) ───────────────
+
+const DEMO_JOBS: Job[] = [
+  { id: "demo-1", jobNumber: "G12-001", jobCode: "G12-001", jobName: "Kellyville Ridge Retaining Wall", client: "Stockland Development", siteAddress: "45 Kellyville Ridge Rd, Kellyville NSW 2155", status: "Active", startDate: "2026-03-10", completionDate: "2026-08-30", contractValue: "$485,000", projectManager: "Tim Kinsella", superintendent: "Darragh Rabbitte", jobType: "Civil", description: "Construction of 120m reinforced concrete retaining wall with drainage system.", priority: "High" },
+  { id: "demo-2", jobNumber: "G12-002", jobCode: "G12-002", jobName: "Baulkham Hills Earthworks", client: "Mirvac Group", siteAddress: "12 Windsor Rd, Baulkham Hills NSW 2153", status: "Active", startDate: "2026-04-01", completionDate: "2026-09-15", contractValue: "$320,000", projectManager: "Tim Kinsella", superintendent: "Sameer Joshi", jobType: "Earthworks", description: "Site preparation and bulk earthworks for residential development.", priority: "Medium" },
+  { id: "demo-3", jobNumber: "G12-003", jobCode: "G12-003", jobName: "Bella Vista Drainage Upgrade", client: "Hills Shire Council", siteAddress: "Bella Vista Drive, Bella Vista NSW 2153", status: "Active", startDate: "2026-05-15", completionDate: "2026-10-01", contractValue: "$210,000", projectManager: "Tim Kinsella", superintendent: "Darragh Rabbitte", jobType: "Civil", description: "Stormwater drainage upgrade including new pits, pipes and kerb and gutter.", priority: "Medium" },
+  { id: "demo-4", jobNumber: "G12-004", jobCode: "G12-004", jobName: "Pennant Hills Road Widening", client: "Transport for NSW", siteAddress: "Pennant Hills Rd, Thornleigh NSW 2120", status: "On Hold", startDate: "2026-06-01", completionDate: "2026-12-20", contractValue: "$750,000", projectManager: "Tim Kinsella", superintendent: "Sameer Joshi", jobType: "Civil", description: "Road widening and pavement rehabilitation works.", priority: "High" },
+  { id: "demo-5", jobNumber: "G12-005", jobCode: "G12-005", jobName: "Castle Hill Substation Civil Works", client: "Endeavour Energy", siteAddress: "Castle Hill Rd, Castle Hill NSW 2154", status: "Completed", startDate: "2025-10-01", completionDate: "2026-03-31", contractValue: "$180,000", projectManager: "Tim Kinsella", superintendent: "Darragh Rabbitte", jobType: "Civil", description: "Civil works for new 11kV substation including slab, pits and conduits.", priority: "Low" },
+];
+
+const DEMO_DAYSHEETS: DaySheet[] = [
+  { id: "demo-ds-1", jobCode: "G12-001", jobName: "Kellyville Ridge Retaining Wall", workerName: "Jake Morrison", workerEmail: "jake.morrison@g12consulting.com.au", date: "2026-06-27", startTime: "07:00", finishTime: "15:30", breakMinutes: 30, ordinaryHours: 8, overtimeHours: 0, allowances: "Travel, Tool", notes: "Completed formwork for section A.", approvalStatus: "Pending", approvedBy: "", approvedDate: "", payrollExportStatus: "Not Exported", xeroReference: "", site: "Kellyville Ridge", trade: "Concretor" },
+  { id: "demo-ds-2", jobCode: "G12-001", jobName: "Kellyville Ridge Retaining Wall", workerName: "Ryan Chen", workerEmail: "ryan.chen@g12consulting.com.au", date: "2026-06-27", startTime: "07:00", finishTime: "17:00", breakMinutes: 30, ordinaryHours: 8, overtimeHours: 1.5, allowances: "Travel", notes: "Steel fixing and pour preparation.", approvalStatus: "Pending", approvedBy: "", approvedDate: "", payrollExportStatus: "Not Exported", xeroReference: "", site: "Kellyville Ridge", trade: "Steel Fixer" },
+  { id: "demo-ds-3", jobCode: "G12-002", jobName: "Baulkham Hills Earthworks", workerName: "Liam Walsh", workerEmail: "liam.walsh@g12consulting.com.au", date: "2026-06-26", startTime: "06:30", finishTime: "15:00", breakMinutes: 30, ordinaryHours: 8, overtimeHours: 0, allowances: "Travel, Meal", notes: "Cut and fill operations, bulk earthworks.", approvalStatus: "Approved", approvedBy: "Tim Kinsella", approvedDate: "2026-06-27", payrollExportStatus: "Not Exported", xeroReference: "", site: "Baulkham Hills", trade: "Plant Operator" },
+  { id: "demo-ds-4", jobCode: "G12-003", jobName: "Bella Vista Drainage Upgrade", workerName: "Sam Nguyen", workerEmail: "sam.nguyen@g12consulting.com.au", date: "2026-06-26", startTime: "07:00", finishTime: "15:30", breakMinutes: 30, ordinaryHours: 8, overtimeHours: 0, allowances: "Travel", notes: "Installed 3x stormwater pits.", approvalStatus: "Approved", approvedBy: "Tim Kinsella", approvedDate: "2026-06-26", payrollExportStatus: "Exported", xeroReference: "XERO-20260626", site: "Bella Vista", trade: "Pipe Layer" },
+  { id: "demo-ds-5", jobCode: "G12-002", jobName: "Baulkham Hills Earthworks", workerName: "Jake Morrison", workerEmail: "jake.morrison@g12consulting.com.au", date: "2026-06-25", startTime: "07:00", finishTime: "16:00", breakMinutes: 30, ordinaryHours: 8, overtimeHours: 0.5, allowances: "Travel, Tool", notes: "Compaction testing and subgrade prep.", approvalStatus: "Rejected", approvedBy: "Tim Kinsella", approvedDate: "2026-06-26", payrollExportStatus: "Not Exported", xeroReference: "", site: "Baulkham Hills", trade: "Concretor" },
+];
+
+const DEMO_SUBCONTRACTORS: Subcontractor[] = [
+  { id: "demo-sub-1", companyName: "Apex Concrete Solutions", abn: "51 234 567 890", trade: "Concretor", contactName: "Mark Thompson", contactPhone: "0412 345 678", contactEmail: "mark@apexconcrete.com.au", insuranceExpiry: "2027-03-31", licenceExpiry: "2027-06-30", licenceNumber: "CL-48291", prequalificationStatus: "Approved", complianceStatus: "Active", inductionStatus: "Complete", swmsStatus: "Approved", mobilisationApproved: true, activeJobCodes: ["G12-001", "G12-002"], notes: "Preferred concretor. Excellent safety record.", insuranceDocUrl: "https://g12group.sharepoint.com/sites/G12JobControl/Shared%20Documents/Subcontractors/Apex_Insurance_2027.pdf", licenceDocUrl: "https://g12group.sharepoint.com/sites/G12JobControl/Shared%20Documents/Subcontractors/Apex_Licence_2027.pdf", swmsDocUrl: "https://g12group.sharepoint.com/sites/G12JobControl/Shared%20Documents/Subcontractors/Apex_SWMS_2026.pdf" },
+  { id: "demo-sub-2", companyName: "Precision Earthmoving Pty Ltd", abn: "72 345 678 901", trade: "Plant Operator", contactName: "Steve Holloway", contactPhone: "0423 456 789", contactEmail: "steve@precisionearthmove.com.au", insuranceExpiry: "2026-07-15", licenceExpiry: "2026-08-01", licenceNumber: "PL-29384", prequalificationStatus: "Approved", complianceStatus: "Expiring Soon", inductionStatus: "Complete", swmsStatus: "Approved", mobilisationApproved: true, activeJobCodes: ["G12-002"], notes: "Insurance expires soon — renewal in progress.", insuranceDocUrl: "https://g12group.sharepoint.com/sites/G12JobControl/Shared%20Documents/Subcontractors/Precision_Insurance_2026.pdf", licenceDocUrl: "", swmsDocUrl: "https://g12group.sharepoint.com/sites/G12JobControl/Shared%20Documents/Subcontractors/Precision_SWMS_2026.pdf" },
+  { id: "demo-sub-3", companyName: "Blue Sky Drainage", abn: "88 456 789 012", trade: "Pipe Layer", contactName: "Karen Lee", contactPhone: "0434 567 890", contactEmail: "karen@blueskydrainage.com.au", insuranceExpiry: "2025-12-31", licenceExpiry: "2026-02-28", licenceNumber: "DL-11293", prequalificationStatus: "Pending", complianceStatus: "Blocked", inductionStatus: "Pending", swmsStatus: "Pending", mobilisationApproved: false, activeJobCodes: [], notes: "Insurance and licence both expired. Do not mobilise.", insuranceDocUrl: "", licenceDocUrl: "", swmsDocUrl: "" },
+  { id: "demo-sub-4", companyName: "SafeForm Pty Ltd", abn: "63 567 890 123", trade: "Steel Fixer", contactName: "Tony Ricci", contactPhone: "0445 678 901", contactEmail: "tony@safeform.com.au", insuranceExpiry: "2027-01-31", licenceExpiry: "2027-04-30", licenceNumber: "SF-38291", prequalificationStatus: "Approved", complianceStatus: "Active", inductionStatus: "Complete", swmsStatus: "Approved", mobilisationApproved: true, activeJobCodes: ["G12-001"], notes: "", insuranceDocUrl: "https://g12group.sharepoint.com/sites/G12JobControl/Shared%20Documents/Subcontractors/SafeForm_Insurance_2027.pdf", licenceDocUrl: "https://g12group.sharepoint.com/sites/G12JobControl/Shared%20Documents/Subcontractors/SafeForm_Licence_2027.pdf", swmsDocUrl: "https://g12group.sharepoint.com/sites/G12JobControl/Shared%20Documents/Subcontractors/SafeForm_SWMS_2026.pdf" },
+  { id: "demo-sub-5", companyName: "Groundworks NSW", abn: "44 678 901 234", trade: "Concretor", contactName: "Paul Denton", contactPhone: "0456 789 012", contactEmail: "paul@groundworksnsw.com.au", insuranceExpiry: "2026-11-30", licenceExpiry: "2026-12-31", licenceNumber: "GW-49201", prequalificationStatus: "Not Started", complianceStatus: "Active", inductionStatus: "Not Started", swmsStatus: "Not Submitted", mobilisationApproved: false, activeJobCodes: [], notes: "New subcontractor — onboarding in progress.", insuranceDocUrl: "", licenceDocUrl: "", swmsDocUrl: "" },
+];
+
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 const SITE_ID =
   "g12group.sharepoint.com,350ccf6f-27ad-4edc-b7a2-e295b71d3ab2,ea9063e3-c201-47fb-90c0-2f44b60a52b4";
@@ -103,6 +129,9 @@ export interface Subcontractor {
   mobilisationApproved: boolean;
   activeJobCodes: string[];
   notes: string;
+  insuranceDocUrl?: string;
+  licenceDocUrl?: string;
+  swmsDocUrl?: string;
 }
 
 // ─── Core API helper ──────────────────────────────────────────────────────────
@@ -225,16 +254,28 @@ function mapJob(raw: any): Job {
 }
 
 export async function getJobs(): Promise<Job[]> {
-  const items = await getListItems("Job Register", undefined, "fields/Job_x0020_Number asc");
-  return items.map(mapJob);
+  try {
+    const items = await getListItems("Job Register", undefined, "fields/Job_x0020_Number asc");
+    if (items.length === 0) return DEMO_JOBS;
+    return items.map(mapJob);
+  } catch {
+    return DEMO_JOBS;
+  }
 }
 
 export async function getJob(id: string): Promise<Job | null> {
-  const res = await graphFetch(
-    `/sites/${SITE_ID}/lists/${encodeURIComponent("Job Register")}/items/${id}?expand=fields`
-  );
-  if (!res.ok) return null;
-  return mapJob(await res.json());
+  // Demo data fallback
+  const demo = DEMO_JOBS.find((j) => j.id === id);
+  if (demo) return demo;
+  try {
+    const res = await graphFetch(
+      `/sites/${SITE_ID}/lists/${encodeURIComponent("Job Register")}/items/${id}?expand=fields`
+    );
+    if (!res.ok) return null;
+    return mapJob(await res.json());
+  } catch {
+    return null;
+  }
 }
 
 export async function createJob(job: Omit<Job, "id">): Promise<Job> {
@@ -288,8 +329,13 @@ function mapDaySheet(raw: any): DaySheet {
 }
 
 export async function getDaySheets(filter?: string): Promise<DaySheet[]> {
-  const items = await getListItems("Day Sheets", filter, "fields/Work_x0020_Date desc");
-  return items.map(mapDaySheet);
+  try {
+    const items = await getListItems("Day Sheets", filter, "fields/Work_x0020_Date desc");
+    if (items.length === 0) return DEMO_DAYSHEETS;
+    return items.map(mapDaySheet);
+  } catch {
+    return DEMO_DAYSHEETS;
+  }
 }
 
 export async function createDaySheet(
@@ -469,20 +515,32 @@ function mapSubcontractor(raw: any): Subcontractor {
 }
 
 export async function getSubcontractors(): Promise<Subcontractor[]> {
-  const items = await getListItems(
-    "Subcontractor Register",
-    undefined,
-    "fields/Company_x0020_Name asc"
-  );
-  return items.map(mapSubcontractor);
+  try {
+    const items = await getListItems(
+      "Subcontractor Register",
+      undefined,
+      "fields/Company_x0020_Name asc"
+    );
+    if (items.length === 0) return DEMO_SUBCONTRACTORS;
+    return items.map(mapSubcontractor);
+  } catch {
+    return DEMO_SUBCONTRACTORS;
+  }
 }
 
 export async function getSubcontractor(id: string): Promise<Subcontractor | null> {
-  const res = await graphFetch(
-    `/sites/${SITE_ID}/lists/${encodeURIComponent("Subcontractor Register")}/items/${id}?expand=fields`
-  );
-  if (!res.ok) return null;
-  return mapSubcontractor(await res.json());
+  // Demo data fallback
+  const demo = DEMO_SUBCONTRACTORS.find((s) => s.id === id);
+  if (demo) return demo;
+  try {
+    const res = await graphFetch(
+      `/sites/${SITE_ID}/lists/${encodeURIComponent("Subcontractor Register")}/items/${id}?expand=fields`
+    );
+    if (!res.ok) return null;
+    return mapSubcontractor(await res.json());
+  } catch {
+    return null;
+  }
 }
 
 export async function createSubcontractor(

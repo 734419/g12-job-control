@@ -2,11 +2,12 @@ import {
   View,
   Text,
   ScrollView,
-  Pressable,
   StyleSheet,
   Alert,
   ActivityIndicator,
   Switch,
+  Linking,
+  TouchableOpacity,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -32,15 +33,53 @@ function InfoRow({ label, value, valueColor }: { label: string; value: string; v
   );
 }
 
+function DocRow({ label, url }: { label: string; url?: string }) {
+  const colors = useColors();
+  const hasDoc = !!url;
+
+  const handleOpen = () => {
+    if (!url) return;
+    Linking.openURL(url).catch(() =>
+      Alert.alert("Cannot Open", "Could not open the document. Please check your connection.")
+    );
+  };
+
+  return (
+    <View style={[styles.infoRow, styles.docRow]}>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.infoLabel, { color: colors.muted }]}>{label}</Text>
+        <Text
+          style={[
+            styles.infoValue,
+            { color: hasDoc ? "#1B2A4A" : colors.muted },
+          ]}
+        >
+          {hasDoc ? "Document available" : "Not uploaded"}
+        </Text>
+      </View>
+      {hasDoc && (
+        <TouchableOpacity
+          onPress={handleOpen}
+          style={styles.docButton}
+          activeOpacity={0.75}
+        >
+          <IconSymbol name="arrow.up.right.square" size={14} color="#fff" />
+          <Text style={styles.docButtonText}>Open</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 function StatusBadge({ label, value }: { label: string; value: string }) {
-  const colors: Record<string, { bg: string; text: string }> = {
+  const statusColors: Record<string, { bg: string; text: string }> = {
     Complete: { bg: "#DCFCE7", text: "#16A34A" },
     Approved: { bg: "#DCFCE7", text: "#16A34A" },
     Pending: { bg: "#FEF3C7", text: "#D97706" },
     "Not Started": { bg: "#F1F5F9", text: "#64748B" },
     "Not Submitted": { bg: "#F1F5F9", text: "#64748B" },
   };
-  const style = colors[value] ?? { bg: "#F1F5F9", text: "#64748B" };
+  const style = statusColors[value] ?? { bg: "#F1F5F9", text: "#64748B" };
   const themeColors = useColors();
   return (
     <View style={styles.infoRow}>
@@ -177,6 +216,14 @@ export default function SubcontractorDetailScreen() {
           <StatusBadge label="Prequalification" value={sub.prequalificationStatus} />
         </View>
 
+        {/* Documents */}
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardTitle, { color: colors.foreground }]}>Documents</Text>
+          <DocRow label="Insurance Certificate" url={sub.insuranceDocUrl} />
+          <DocRow label="Contractor Licence" url={sub.licenceDocUrl} />
+          <DocRow label="SWMS" url={sub.swmsDocUrl} />
+        </View>
+
         {/* Active Jobcodes */}
         {sub.activeJobCodes.length > 0 && (
           <View style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -197,6 +244,8 @@ export default function SubcontractorDetailScreen() {
             <Text style={[styles.notes, { color: colors.foreground }]}>{sub.notes}</Text>
           </View>
         ) : null}
+
+        <View style={{ height: 24 }} />
       </ScrollView>
     </ScreenContainer>
   );
@@ -271,6 +320,11 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E2E8F0",
     gap: 4,
   },
+  docRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   infoLabel: {
     fontSize: 11,
     fontFamily: "Montserrat_500Medium",
@@ -280,6 +334,21 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 15,
     fontFamily: "Montserrat_400Regular",
+  },
+  docButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#1B2A4A",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  docButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Montserrat_600SemiBold",
   },
   statusPill: {
     alignSelf: "flex-start",
