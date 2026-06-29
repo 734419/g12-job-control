@@ -132,14 +132,14 @@ export async function exchangeCodeForToken(
 }
 
 async function storeTokens(bundle: TokenBundle) {
-  await SecureStore.setItemAsync(TOKEN_KEY, bundle.accessToken);
+  await setItem(TOKEN_KEY, bundle.accessToken);
   if (bundle.refreshToken) {
-    await SecureStore.setItemAsync(REFRESH_KEY, bundle.refreshToken);
+    await setItem(REFRESH_KEY, bundle.refreshToken);
   }
 }
 
 export async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
+  const refreshToken = await getItem(REFRESH_KEY);
   if (!refreshToken) return null;
 
   const params = new URLSearchParams({
@@ -159,9 +159,9 @@ export async function refreshAccessToken(): Promise<string | null> {
     if (!res.ok) return null;
 
     const data = await res.json();
-    await SecureStore.setItemAsync(TOKEN_KEY, data.access_token);
+    await setItem(TOKEN_KEY, data.access_token);
     if (data.refresh_token) {
-      await SecureStore.setItemAsync(REFRESH_KEY, data.refresh_token);
+      await setItem(REFRESH_KEY, data.refresh_token);
     }
     return data.access_token;
   } catch {
@@ -169,14 +169,33 @@ export async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+async function getItem(key: string): Promise<string | null> {
+  if (typeof localStorage !== "undefined") return localStorage.getItem(key);
+  return SecureStore.getItemAsync(key);
+}
+
+async function setItem(key: string, value: string): Promise<void> {
+  if (typeof localStorage !== "undefined") { localStorage.setItem(key, value); return; }
+  await SecureStore.setItemAsync(key, value);
+}
+
+async function removeItem(key: string): Promise<void> {
+  if (typeof localStorage !== "undefined") { localStorage.removeItem(key); return; }
+  await SecureStore.deleteItemAsync(key);
+}
+
 export async function getStoredToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+  return getItem(TOKEN_KEY);
 }
 
 export async function clearTokens(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-  await SecureStore.deleteItemAsync(REFRESH_KEY);
-  await SecureStore.deleteItemAsync(USER_KEY);
+  await removeItem(TOKEN_KEY);
+  await removeItem(REFRESH_KEY);
+  await removeItem(USER_KEY);
+}
+
+export async function storeUser(user: MSUser): Promise<void> {
+  await setItem(USER_KEY, JSON.stringify(user));
 }
 
 export async function fetchMSUser(accessToken: string): Promise<MSUser> {
@@ -192,12 +211,12 @@ export async function fetchMSUser(accessToken: string): Promise<MSUser> {
     jobTitle: data.jobTitle,
     userPrincipalName: data.userPrincipalName,
   };
-  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+  await setItem(USER_KEY, JSON.stringify(user));
   return user;
 }
 
 export async function getStoredUser(): Promise<MSUser | null> {
-  const raw = await SecureStore.getItemAsync(USER_KEY);
+  const raw = await getItem(USER_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as MSUser;

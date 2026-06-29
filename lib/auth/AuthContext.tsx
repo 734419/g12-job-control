@@ -106,12 +106,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const request = buildAuthRequest(redirectUri);
-      await request.makeAuthUrlAsync({
-        authorizationEndpoint: `https://login.microsoftonline.com/${process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "common"}/oauth2/v2.0/authorize`,
-      });
-      const result = await request.promptAsync({
-        authorizationEndpoint: `https://login.microsoftonline.com/${process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "common"}/oauth2/v2.0/authorize`,
-      });
+      const tenantId = process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "common";
+      const authEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`;
+
+      if (Platform.OS === "web") {
+        // On web: use full-page redirect to avoid popup blocker.
+        // Store the code verifier in sessionStorage so the callback page can retrieve it.
+        const authUrl = await request.makeAuthUrlAsync({ authorizationEndpoint: authEndpoint });
+        if (typeof window !== "undefined" && request.codeVerifier) {
+          sessionStorage.setItem("pkce_verifier", request.codeVerifier);
+          sessionStorage.setItem("pkce_redirect_uri", redirectUri);
+          window.location.href = authUrl;
+        }
+        return; // page will redirect away — no further state updates needed
+      }
+
+      // Native (iOS / Android / Expo Go): use in-app browser
+      const result = await request.promptAsync({ authorizationEndpoint: authEndpoint });
 
       if (result.type === "success" && result.params.code) {
         const bundle = await exchangeCodeForToken(
@@ -123,7 +134,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAccessToken(bundle.accessToken);
         setUser(msUser);
         setIsAuthenticated(true);
-        // Load role after successful sign-in
         loadRole();
       } else if (result.type === "error") {
         setError(result.error?.message ?? "Sign in failed");
