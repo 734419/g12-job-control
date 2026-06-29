@@ -9,15 +9,17 @@ import {
   ActivityIndicator,
   Image,
   Platform,
+  Modal,
+  FlatList,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { createDaySheet, uploadSitePhoto } from "@/lib/api/sharepoint";
+import { createDaySheet, uploadSitePhoto, getJobs, type Job } from "@/lib/api/sharepoint";
 import { enqueue } from "@/lib/offline/queue";
 
 const ALLOWANCES = [
@@ -54,7 +56,10 @@ export default function NewDaySheetScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams<{ jobCode?: string }>();
 
-  const [jobCode, setJobCode] = useState(params.jobCode ?? "");
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [jobPickerVisible, setJobPickerVisible] = useState(false);
+  const [workerName, setWorkerName] = useState(user?.displayName ?? "");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [startTime, setStartTime] = useState("07:00");
   const [finishTime, setFinishTime] = useState("15:30");
@@ -66,6 +71,18 @@ export default function NewDaySheetScreen() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const { ordinary, overtime } = calculateHours(startTime, finishTime, Number(breakMins) || 0);
+
+  useEffect(() => {
+    getJobs().then((data) => {
+      const active = data.filter((j) => j.status === "Active");
+      setJobs(active);
+      // Pre-select if jobCode param was passed
+      if (params.jobCode) {
+        const match = active.find((j) => j.jobCode === params.jobCode);
+        if (match) setSelectedJob(match);
+      }
+    });
+  }, [params.jobCode]);
 
   const toggleAllowance = (a: string) => {
     setSelectedAllowances((prev) =>
@@ -86,7 +103,6 @@ export default function NewDaySheetScreen() {
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: false,
       quality: 0.7,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
@@ -99,7 +115,6 @@ export default function NewDaySheetScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: false,
       quality: 0.7,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
     });
     if (!result.canceled) {
@@ -116,15 +131,19 @@ export default function NewDaySheetScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!jobCode.trim()) {
-      Alert.alert("Validation", "Please enter a Job Code.");
+    if (!selectedJob) {
+      Alert.alert("Validation", "Please select a Job.");
+      return;
+    }
+    if (!workerName.trim()) {
+      Alert.alert("Validation", "Please enter the worker name.");
       return;
     }
     setSaving(true);
     const sheet = {
-      jobCode: jobCode.trim(),
-      jobName: "",
-      workerName: user?.displayName ?? "Unknown",
+      jobCode: selectedJob.jobCode,
+      jobName: selectedJob.jobName,
+      workerName: workerName.trim(),
       workerEmail: user?.mail ?? "",
       date,
       startTime,
@@ -139,26 +158,20 @@ export default function NewDaySheetScreen() {
       approvedDate: "",
       payrollExportStatus: "Not Exported" as const,
       xeroReference: "",
-      site: "",
+      site: selectedJob.siteAddress ?? "",
       trade: "",
     };
 
     try {
       await createDaySheet(sheet);
 
-      // Upload photos to SharePoint Site Photos library
       if (photos.length > 0) {
         setUploadingPhoto(true);
         for (const photo of photos) {
           try {
-            await uploadSitePhoto(
-              photo.uri,
-              jobCode.trim(),
-              user?.displayName ?? "Unknown",
-              date
-            );
+            await uploadSitePhoto(photo.uri, selectedJob.jobCode, workerName.trim(), date);
           } catch {
-            // Non-fatal — photos may fail individually
+            // Non-fatal
           }
         }
         setUploadingPhoto(false);
@@ -166,11 +179,10 @@ export default function NewDaySheetScreen() {
 
       Alert.alert(
         "Submitted",
-        `Day sheet saved to SharePoint${photos.length > 0 ? ` with ${photos.length} photo(s)` : ""}.`,
+        `Day sheet saved${photos.length > 0 ? ` with ${photos.length} photo(s)` : ""}.`,
         [{ text: "OK", onPress: () => router.back() }]
       );
     } catch {
-      // Save offline
       await enqueue({ type: "CREATE_DAYSHEET", payload: sheet });
       Alert.alert(
         "Saved Offline",
@@ -185,60 +197,97 @@ export default function NewDaySheetScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background" edges={["left", "right", "bottom"]}>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Job Details</Text>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <IconSymbol name="chevron.left" size={20} color="#fff" />
+        </Pressable>
+        <Text style={styles.headerTitle}>New Day Sheet</Text>
+        <View style={{ width: 44 }} />
+      </View>
 
-        <FormField label="Job Code *" colors={colors}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+
+        {/* Job Picker */}
+        <View style={{ gap: 6 }}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Job *</Text>
+          <Pressable
+            onPress={() => setJobPickerVisible(true)}
+            style={[styles.pickerBtn, { borderColor: selectedJob ? "#1B2A4A" : colors.border, backgroundColor: colors.surface }]}
+          >
+            {selectedJob ? (
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.pickerBtnText, { color: colors.foreground }]} numberOfLines={1}>
+                  {selectedJob.jobCode} — {selectedJob.jobName}
+                </Text>
+                <Text style={[styles.pickerBtnSub, { color: colors.muted }]} numberOfLines={1}>
+                  {selectedJob.client}
+                </Text>
+              </View>
+            ) : (
+              <Text style={[styles.pickerBtnText, { color: colors.muted }]}>Select a job…</Text>
+            )}
+            <IconSymbol name="chevron.right" size={16} color={colors.muted} />
+          </Pressable>
+        </View>
+
+        {/* Worker Name */}
+        <View style={{ gap: 6 }}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Worker Name *</Text>
           <TextInput
-            style={[styles.input, { color: colors.foreground, borderColor: colors.border }]}
-            value={jobCode}
-            onChangeText={setJobCode}
-            placeholder="e.g. G12-001"
+            style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]}
+            value={workerName}
+            onChangeText={setWorkerName}
+            placeholder="Full name"
             placeholderTextColor={colors.muted}
-            autoCapitalize="characters"
             returnKeyType="done"
           />
-        </FormField>
+        </View>
 
-        <FormField label="Date" colors={colors}>
+        {/* Date */}
+        <View style={{ gap: 6 }}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Date</Text>
           <TextInput
-            style={[styles.input, { color: colors.foreground, borderColor: colors.border }]}
+            style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]}
             value={date}
             onChangeText={setDate}
             placeholder="YYYY-MM-DD"
             placeholderTextColor={colors.muted}
             returnKeyType="done"
           />
-        </FormField>
+        </View>
 
+        {/* Hours */}
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Hours</Text>
-
         <View style={styles.row}>
-          <FormField label="Start Time" colors={colors} style={{ flex: 1 }}>
+          <View style={[{ flex: 1, gap: 6 }]}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Start Time</Text>
             <TextInput
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border }]}
+              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]}
               value={startTime}
               onChangeText={setStartTime}
               placeholder="07:00"
               placeholderTextColor={colors.muted}
               returnKeyType="done"
             />
-          </FormField>
-          <FormField label="Finish Time" colors={colors} style={{ flex: 1 }}>
+          </View>
+          <View style={[{ flex: 1, gap: 6 }]}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Finish Time</Text>
             <TextInput
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border }]}
+              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]}
               value={finishTime}
               onChangeText={setFinishTime}
               placeholder="15:30"
               placeholderTextColor={colors.muted}
               returnKeyType="done"
             />
-          </FormField>
+          </View>
         </View>
 
-        <FormField label="Break (minutes)" colors={colors}>
+        <View style={{ gap: 6 }}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Break (minutes)</Text>
           <TextInput
-            style={[styles.input, { color: colors.foreground, borderColor: colors.border }]}
+            style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]}
             value={breakMins}
             onChangeText={setBreakMins}
             placeholder="30"
@@ -246,22 +295,29 @@ export default function NewDaySheetScreen() {
             keyboardType="numeric"
             returnKeyType="done"
           />
-        </FormField>
+        </View>
 
-        {/* Calculated hours */}
+        {/* Calculated hours summary */}
         <View style={[styles.hoursCard, { backgroundColor: "#EFF6FF" }]}>
           <View style={styles.hoursRow}>
             <Text style={styles.hoursLabel}>Ordinary Hours</Text>
             <Text style={styles.hoursValue}>{ordinary.toFixed(2)} hrs</Text>
           </View>
-          <View style={styles.hoursRow}>
+          <View style={[styles.hoursRow, { marginTop: 6 }]}>
             <Text style={styles.hoursLabel}>Overtime Hours</Text>
             <Text style={[styles.hoursValue, overtime > 0 ? { color: "#D97706" } : {}]}>
               {overtime.toFixed(2)} hrs
             </Text>
           </View>
+          <View style={[styles.hoursRow, { marginTop: 6, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#BFDBFE" }]}>
+            <Text style={[styles.hoursLabel, { fontFamily: "Montserrat_700Bold" }]}>Total Hours</Text>
+            <Text style={[styles.hoursValue, { fontFamily: "Montserrat_700Bold" }]}>
+              {(ordinary + overtime).toFixed(2)} hrs
+            </Text>
+          </View>
         </View>
 
+        {/* Allowances */}
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Allowances</Text>
         <View style={styles.allowancesGrid}>
           {ALLOWANCES.map((a) => (
@@ -275,18 +331,14 @@ export default function NewDaySheetScreen() {
                   : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
               ]}
             >
-              <Text
-                style={[
-                  styles.allowanceText,
-                  { color: selectedAllowances.includes(a) ? "#fff" : colors.foreground },
-                ]}
-              >
+              <Text style={[styles.allowanceText, { color: selectedAllowances.includes(a) ? "#fff" : colors.foreground }]}>
                 {a}
               </Text>
             </Pressable>
           ))}
         </View>
 
+        {/* Notes */}
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Notes</Text>
         <TextInput
           style={[styles.notesInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]}
@@ -302,19 +354,15 @@ export default function NewDaySheetScreen() {
         {/* Site Photos */}
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Site Photos</Text>
         <Text style={[styles.photoSubtitle, { color: colors.muted }]}>
-          Attach site photos or SWMS documents. Photos are uploaded to the SharePoint Site Photos library.
+          Attach site photos. Uploaded to the SharePoint Site Photos library.
         </Text>
 
-        {/* Photo thumbnails */}
         {photos.length > 0 && (
           <View style={styles.photoGrid}>
             {photos.map((photo, index) => (
               <View key={index} style={styles.photoThumb}>
                 <Image source={{ uri: photo.uri }} style={styles.photoImage} />
-                <Pressable
-                  onPress={() => removePhoto(index)}
-                  style={styles.photoRemoveBtn}
-                >
+                <Pressable onPress={() => removePhoto(index)} style={styles.photoRemoveBtn}>
                   <Text style={styles.photoRemoveText}>✕</Text>
                 </Pressable>
               </View>
@@ -322,15 +370,11 @@ export default function NewDaySheetScreen() {
           </View>
         )}
 
-        {/* Photo action buttons */}
         <View style={styles.photoActions}>
           {Platform.OS !== "web" && (
             <Pressable
               onPress={takePhoto}
-              style={({ pressed }) => [
-                styles.photoBtn,
-                { backgroundColor: "#1B2A4A", opacity: pressed ? 0.8 : 1 },
-              ]}
+              style={({ pressed }) => [styles.photoBtn, { backgroundColor: "#1B2A4A", opacity: pressed ? 0.8 : 1 }]}
             >
               <IconSymbol name="camera.fill" size={18} color="#fff" />
               <Text style={styles.photoBtnText}>Take Photo</Text>
@@ -348,6 +392,7 @@ export default function NewDaySheetScreen() {
           </Pressable>
         </View>
 
+        {/* Submit */}
         <Pressable
           onPress={handleSubmit}
           disabled={saving || uploadingPhoto}
@@ -359,9 +404,7 @@ export default function NewDaySheetScreen() {
           {saving || uploadingPhoto ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <ActivityIndicator color="#fff" />
-              <Text style={styles.submitBtnText}>
-                {uploadingPhoto ? "Uploading photos…" : "Saving…"}
-              </Text>
+              <Text style={styles.submitBtnText}>{uploadingPhoto ? "Uploading photos…" : "Saving…"}</Text>
             </View>
           ) : (
             <Text style={styles.submitBtnText}>
@@ -370,41 +413,87 @@ export default function NewDaySheetScreen() {
           )}
         </Pressable>
       </ScrollView>
+
+      {/* Job Picker Modal */}
+      <Modal visible={jobPickerVisible} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { backgroundColor: "#1B2A4A" }]}>
+            <Text style={styles.modalTitle}>Select Job</Text>
+            <Pressable onPress={() => setJobPickerVisible(false)} style={styles.modalCloseBtn}>
+              <IconSymbol name="xmark.circle.fill" size={24} color="rgba(255,255,255,0.7)" />
+            </Pressable>
+          </View>
+          <FlatList
+            data={jobs}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: 16, gap: 10 }}
+            ListEmptyComponent={
+              <Text style={[styles.emptyText, { color: colors.muted }]}>No active jobs found.</Text>
+            }
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => {
+                  setSelectedJob(item);
+                  setJobPickerVisible(false);
+                }}
+                style={({ pressed }) => [
+                  styles.jobPickerItem,
+                  {
+                    backgroundColor: selectedJob?.id === item.id ? "#EFF6FF" : colors.surface,
+                    borderColor: selectedJob?.id === item.id ? "#1B2A4A" : colors.border,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.jobCodeBadge, { backgroundColor: "#1B2A4A" }]}>
+                  <Text style={styles.jobCodeText}>{item.jobCode}</Text>
+                </View>
+                <View style={{ flex: 1, marginTop: 6, gap: 2 }}>
+                  <Text style={[styles.jobPickerName, { color: colors.foreground }]} numberOfLines={2}>
+                    {item.jobName}
+                  </Text>
+                  <Text style={[styles.jobPickerClient, { color: colors.muted }]} numberOfLines={1}>
+                    {item.client}
+                  </Text>
+                </View>
+                {selectedJob?.id === item.id && (
+                  <IconSymbol name="checkmark.circle.fill" size={20} color="#1B2A4A" />
+                )}
+              </Pressable>
+            )}
+          />
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
 
-function FormField({
-  label,
-  children,
-  colors,
-  style,
-}: {
-  label: string;
-  children: React.ReactNode;
-  colors: any;
-  style?: any;
-}) {
-  return (
-    <View style={[{ gap: 6 }, style]}>
-      <Text style={[styles.fieldLabel, { color: colors.muted }]}>{label}</Text>
-      {children}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    justifyContent: "space-between",
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: "Montserrat_700Bold",
+    color: "#FFFFFF",
+  },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: "Montserrat_700Bold",
     marginTop: 4,
   },
-  row: {
-    flexDirection: "row",
-    gap: 12,
-  },
   fieldLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Montserrat_500Medium",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -417,10 +506,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Montserrat_400Regular",
   },
+  pickerBtn: {
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 52,
+  },
+  pickerBtnText: {
+    fontSize: 15,
+    fontFamily: "Montserrat_500Medium",
+    flex: 1,
+  },
+  pickerBtnSub: {
+    fontSize: 12,
+    fontFamily: "Montserrat_400Regular",
+    marginTop: 2,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 12,
+  },
   hoursCard: {
     borderRadius: 12,
     padding: 16,
-    gap: 8,
   },
   hoursRow: {
     flexDirection: "row",
@@ -454,7 +566,8 @@ const styles = StyleSheet.create({
   notesInput: {
     borderWidth: 1,
     borderRadius: 10,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     fontSize: 14,
     fontFamily: "Montserrat_400Regular",
     minHeight: 100,
@@ -462,30 +575,28 @@ const styles = StyleSheet.create({
   photoSubtitle: {
     fontSize: 13,
     fontFamily: "Montserrat_400Regular",
-    lineHeight: 18,
     marginTop: -8,
   },
   photoGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   photoThumb: {
-    width: 90,
-    height: 90,
-    borderRadius: 10,
+    width: 80,
+    height: 80,
+    borderRadius: 8,
     overflow: "hidden",
     position: "relative",
   },
   photoImage: {
     width: "100%",
     height: "100%",
-    resizeMode: "cover",
   },
   photoRemoveBtn: {
     position: "absolute",
-    top: 4,
-    right: 4,
+    top: 2,
+    right: 2,
     backgroundColor: "rgba(0,0,0,0.6)",
     borderRadius: 10,
     width: 20,
@@ -495,7 +606,7 @@ const styles = StyleSheet.create({
   },
   photoRemoveText: {
     color: "#fff",
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Montserrat_700Bold",
   },
   photoActions: {
@@ -508,16 +619,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   photoBtnText: {
     fontSize: 14,
-    fontFamily: "Montserrat_600SemiBold",
+    fontFamily: "Montserrat_500Medium",
     color: "#fff",
   },
   submitBtn: {
-    padding: 16,
+    paddingVertical: 16,
     borderRadius: 14,
     alignItems: "center",
     marginTop: 8,
@@ -526,5 +637,58 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontFamily: "Montserrat_700Bold",
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: "Montserrat_700Bold",
+    color: "#fff",
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  jobPickerItem: {
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1.5,
+    gap: 4,
+    flexDirection: "column",
+  },
+  jobCodeBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  jobCodeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontFamily: "Montserrat_700Bold",
+    letterSpacing: 0.5,
+  },
+  jobPickerName: {
+    fontSize: 15,
+    fontFamily: "Montserrat_600SemiBold",
+    lineHeight: 20,
+  },
+  jobPickerClient: {
+    fontSize: 12,
+    fontFamily: "Montserrat_400Regular",
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 40,
+    fontSize: 14,
+    fontFamily: "Montserrat_400Regular",
   },
 });

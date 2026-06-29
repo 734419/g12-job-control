@@ -64,13 +64,22 @@ export default function DaySheetsScreen() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
         <Text style={styles.headerTitle}>Day Sheets</Text>
-        <Pressable
-          style={styles.addBtn}
-          onPress={() => router.push("/daysheet/new")}
-        >
-          <IconSymbol name="plus.circle.fill" size={20} color="#fff" />
-          <Text style={styles.addBtnText}>New</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            style={styles.addBtn}
+            onPress={() => router.push("/daysheet/export" as any)}
+          >
+            <IconSymbol name="arrow.up.doc.fill" size={18} color="#fff" />
+            <Text style={styles.addBtnText}>Export</Text>
+          </Pressable>
+          <Pressable
+            style={styles.addBtn}
+            onPress={() => router.push("/daysheet/new")}
+          >
+            <IconSymbol name="plus.circle.fill" size={20} color="#fff" />
+            <Text style={styles.addBtnText}>New</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Tabs */}

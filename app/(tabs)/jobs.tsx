@@ -73,8 +73,17 @@ export default function JobsScreen() {
     <ScreenContainer containerClassName="bg-background">
       {/* Header */}
       <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
-        <Text style={styles.headerTitle}>Jobs</Text>
-        <Text style={styles.headerSub}>{filtered.length} job{filtered.length !== 1 ? "s" : ""}</Text>
+        <View>
+          <Text style={styles.headerTitle}>Jobs</Text>
+          <Text style={styles.headerSub}>{filtered.length} job{filtered.length !== 1 ? "s" : ""}</Text>
+        </View>
+        <Pressable
+          style={styles.newJobBtn}
+          onPress={() => router.push("/job/new" as any)}
+        >
+          <IconSymbol name="plus.circle.fill" size={18} color="#fff" />
+          <Text style={styles.newJobBtnText}>New Job</Text>
+        </Pressable>
       </View>
 
       {/* Search */}
@@ -287,6 +296,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   retryBtnText: {
+    color: "#fff",
+    fontFamily: "Montserrat_600SemiBold",
+    fontSize: 14,
+  },
+  newJobBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  newJobBtnText: {
     color: "#fff",
     fontFamily: "Montserrat_600SemiBold",
     fontSize: 14,

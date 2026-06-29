@@ -24,9 +24,11 @@ function RootLayoutInner() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="job/[id]" options={{ headerShown: true, title: "Job Detail" }} />
-        <Stack.Screen name="daysheet/new" options={{ headerShown: true, title: "New Day Sheet" }} />
-        <Stack.Screen name="daysheet/[id]" options={{ headerShown: true, title: "Day Sheet" }} />
+        <Stack.Screen name="job/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="job/new" options={{ headerShown: false }} />
+        <Stack.Screen name="daysheet/new" options={{ headerShown: false }} />
+        <Stack.Screen name="daysheet/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="daysheet/export" options={{ headerShown: false }} />
         <Stack.Screen name="subcontractor/[id]" options={{ headerShown: true, title: "Subcontractor" }} />
         <Stack.Screen name="subcontractor/new" options={{ headerShown: true, title: "Add Subcontractor" }} />
       </Stack>

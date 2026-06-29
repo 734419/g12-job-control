@@ -45,6 +45,9 @@ const MAPPING = {
   "camera.fill": "camera-alt",
   "photo.fill": "photo-library",
   "trash.fill": "delete",
+  "arrow.up.doc.fill": "upload-file",
+  "checkmark.square.fill": "check-box",
+  "square": "check-box-outline-blank",
 } as IconMapping;
 
 export function IconSymbol({

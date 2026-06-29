@@ -237,6 +237,27 @@ export async function getJob(id: string): Promise<Job | null> {
   return mapJob(await res.json());
 }
 
+export async function createJob(job: Omit<Job, "id">): Promise<Job> {
+  const fields: Record<string, any> = {
+    Title: job.jobName,
+    Job_x0020_Number: job.jobNumber,
+    Jobcode: job.jobCode,
+    Client: job.client,
+    Site_x0020_Address: job.siteAddress,
+    Job_x0020_Status: job.status,
+    Start_x0020_Date: job.startDate,
+    Completion_x0020_Date: job.completionDate,
+    Contract_x0020_Value: job.contractValue,
+    Project_x0020_Manager: job.projectManager,
+    Superintendent: job.superintendent,
+    Job_x0020_Type: job.jobType,
+    Job_x0020_Description: job.description,
+    Priority: job.priority,
+  };
+  const raw = await createListItem("Job Register", fields);
+  return mapJob(raw);
+}
+
 // ─── Day Sheets ───────────────────────────────────────────────────────────────
 
 function mapDaySheet(raw: any): DaySheet {

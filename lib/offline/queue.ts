@@ -4,7 +4,7 @@
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createDaySheet, type DaySheet } from "@/lib/api/sharepoint";
+import { createDaySheet, approveDaySheet, rejectDaySheet, type DaySheet } from "@/lib/api/sharepoint";
 
 const QUEUE_KEY = "g12_offline_queue";
 
@@ -46,8 +46,11 @@ export async function flushQueue(): Promise<{ success: number; failed: number }>
       if (action.type === "CREATE_DAYSHEET") {
         await createDaySheet(action.payload);
         success++;
-      } else {
-        // Other action types — mark as success for now
+      } else if (action.type === "APPROVE_DAYSHEET") {
+        await approveDaySheet(action.payload.id, action.payload.approvedBy);
+        success++;
+      } else if (action.type === "REJECT_DAYSHEET") {
+        await rejectDaySheet(action.payload.id, action.payload.approvedBy);
         success++;
       }
     } catch {
