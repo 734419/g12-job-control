@@ -81,7 +81,7 @@ export default function LoginScreen() {
             Redirect URI: {Platform.OS === "web"
               ? AuthSession.makeRedirectUri({ path: "oauth/callback" })
               : Constants.appOwnership === "expo"
-                ? AuthSession.makeRedirectUri({ scheme: "exp", isTripleSlashed: true })
+                ? "exp://8081-ia7j6j1amjoucogwn0wp5-c64336ba.sg1.manus.computer"
                 : AuthSession.makeRedirectUri({ scheme: "manus20260626", path: "auth" })}
           </Text>
         </View>

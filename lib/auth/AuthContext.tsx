@@ -56,13 +56,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Build the correct redirect URI for each platform/environment:
   //   Web            → https://<host>/oauth/callback  (SPA flow)
-  //   Expo Go        → exp://<metro-host>             (registered in Azure as Mobile/Desktop)
+  //   Expo Go        → exp://8081-ia7j6j1amjoucogwn0wp5-c64336ba.sg1.manus.computer (registered in Azure Mobile/Desktop)
   //   Standalone app → manus20260626://auth           (custom scheme, registered in Azure iOS/macOS)
   const isExpoGo = Constants.appOwnership === "expo";
   const redirectUri = Platform.OS === "web"
     ? AuthSession.makeRedirectUri({ path: "oauth/callback" })
     : isExpoGo
-      ? AuthSession.makeRedirectUri({ scheme: "exp", isTripleSlashed: true })
+      ? "exp://8081-ia7j6j1amjoucogwn0wp5-c64336ba.sg1.manus.computer"
       : AuthSession.makeRedirectUri({ scheme: "manus20260626", path: "auth" });
 
   /** Check M365 group membership and cache the result */
