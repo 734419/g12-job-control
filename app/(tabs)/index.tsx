@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
@@ -89,10 +90,17 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
-          <View>
-            <Text style={styles.greeting}>{greeting()}, {firstName}</Text>
-            <Text style={styles.headerTitle}>G12 Job Control</Text>
+        <View style={[styles.header, { backgroundColor: "#0F2A44" }]}>
+          <View style={styles.headerLeft}>
+            <Image
+              source={require("@/assets/images/g12-logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <View style={styles.headerTextBlock}>
+              <Text style={styles.greeting}>{greeting()}, {firstName}</Text>
+              <Text style={styles.headerSubtitle}>Job Control</Text>
+            </View>
           </View>
           <View style={styles.syncBadge}>
             <IconSymbol name="arrow.clockwise" size={12} color="rgba(255,255,255,0.7)" />
@@ -269,11 +277,25 @@ const styles = StyleSheet.create({
     fontFamily: "Montserrat_400Regular",
     marginBottom: 2,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontFamily: "Montserrat_700Bold",
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  logo: {
+    width: 52,
+    height: 52,
+    tintColor: "#FFFFFF",
+    borderRadius: 4,
+  },
+  headerTextBlock: {
+    justifyContent: "center",
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    fontFamily: "Montserrat_600SemiBold",
     color: "#FFFFFF",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   syncBadge: {
     flexDirection: "row",
