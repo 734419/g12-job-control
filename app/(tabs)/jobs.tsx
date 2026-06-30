@@ -7,6 +7,7 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
@@ -72,10 +73,17 @@ export default function JobsScreen() {
   return (
     <ScreenContainer containerClassName="bg-background">
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
-        <View>
-          <Text style={styles.headerTitle}>Jobs</Text>
-          <Text style={styles.headerSub}>{filtered.length} job{filtered.length !== 1 ? "s" : ""}</Text>
+      <View style={[styles.header, { backgroundColor: "#0F2A44" }]}>
+        <View style={styles.headerLeft}>
+          <Image
+            source={require("@/assets/images/g12-logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <View>
+            <Text style={styles.headerTitle}>Jobs</Text>
+            <Text style={styles.headerSub}>{filtered.length} job{filtered.length !== 1 ? "s" : ""}</Text>
+          </View>
         </View>
         <Pressable
           style={styles.newJobBtn}
@@ -175,17 +183,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  logo: {
+    width: 44,
+    height: 44,
+    tintColor: "#FFFFFF",
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: "Montserrat_700Bold",
     color: "#FFFFFF",
   },
   headerSub: {
-    fontSize: 13,
+    fontSize: 12,
     color: "rgba(255,255,255,0.6)",
     fontFamily: "Montserrat_400Regular",
-    marginTop: 2,
+    marginTop: 1,
   },
   searchContainer: {
     flexDirection: "row",

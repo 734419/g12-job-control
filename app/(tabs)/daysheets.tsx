@@ -6,6 +6,7 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
@@ -62,8 +63,15 @@ export default function DaySheetsScreen() {
   return (
     <ScreenContainer containerClassName="bg-background">
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
-        <Text style={styles.headerTitle}>Day Sheets</Text>
+      <View style={[styles.header, { backgroundColor: "#0F2A44" }]}>
+        <View style={styles.headerLeft}>
+          <Image
+            source={require("@/assets/images/g12-logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.headerTitle}>Day Sheets</Text>
+        </View>
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable
             style={styles.addBtn}
@@ -186,8 +194,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  logo: {
+    width: 44,
+    height: 44,
+    tintColor: "#FFFFFF",
+  },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: "Montserrat_700Bold",
     color: "#FFFFFF",
   },
