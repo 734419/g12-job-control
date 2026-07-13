@@ -2,8 +2,8 @@ import * as Linking from "expo-linking";
 import * as ReactNative from "react-native";
 
 // Extract scheme from bundle ID (last segment timestamp, prefixed with "manus")
-// e.g., "space.manus.my.app.t20240115103045" -> "manus20240115103045"
-const bundleId = "com.app.g12jobcontrol";
+// e.g., "space.manus.g12.jobcontrol.t20260626" -> "manus20260626"
+const bundleId = "space.manus.g12.jobcontrol.t20260626";
 const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
 const schemeFromBundleId = `manus${timestamp}`;
 
