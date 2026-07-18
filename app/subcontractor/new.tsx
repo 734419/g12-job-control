@@ -49,8 +49,8 @@ function OptionPicker<T extends string>({
               style={({ pressed }) => [
                 styles.optionChip,
                 {
-                  backgroundColor: active ? "#7F1F1F" : colors.surface,
-                  borderColor: active ? "#7F1F1F" : colors.border,
+                  backgroundColor: active ? "#1B2A4A" : colors.surface,
+                  borderColor: active ? "#1B2A4A" : colors.border,
                   opacity: pressed ? 0.8 : 1,
                 },
               ]}
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     fontFamily: "Montserrat_500Medium",
   },
   submitBtn: {
-    backgroundColor: "#7F1F1F",
+    backgroundColor: "#1B2A4A",
     padding: 16,
     borderRadius: 14,
     alignItems: "center",

@@ -72,7 +72,7 @@ export default function JobDetailScreen() {
   if (loading) {
     return (
       <ScreenContainer>
-        <ActivityIndicator color="#7F1F1F" style={{ marginTop: 40 }} />
+        <ActivityIndicator color="#1B2A4A" style={{ marginTop: 40 }} />
       </ScreenContainer>
     );
   }
@@ -94,7 +94,7 @@ export default function JobDetailScreen() {
     <ScreenContainer containerClassName="bg-background" edges={["left", "right", "bottom"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: "#7F1F1F" }]}>
+        <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
           <View style={styles.headerTopRow}>
             <Pressable onPress={() => router.back()} style={styles.backBtn}>
               <IconSymbol name="chevron.left" size={20} color="#fff" />
@@ -123,10 +123,10 @@ export default function JobDetailScreen() {
 
         {/* Day Sheets Summary Card */}
         {linkedSheetCount !== null && (
-          <View style={[styles.summaryCard, { backgroundColor: "#FFF1F1", borderColor: "#FECACA" }]}>
+          <View style={[styles.summaryCard, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
-                <IconSymbol name="doc.text.fill" size={20} color="#B91C1C" />
+                <IconSymbol name="doc.text.fill" size={20} color="#2563EB" />
                 <Text style={styles.summaryValue}>{linkedSheetCount}</Text>
                 <Text style={styles.summaryLabel}>Day Sheet{linkedSheetCount !== 1 ? "s" : ""}</Text>
               </View>
@@ -162,7 +162,7 @@ export default function JobDetailScreen() {
         {/* Actions */}
         <View style={styles.actions}>
           <Pressable
-            style={({ pressed }) => [styles.actionBtn, { backgroundColor: "#B91C1C", opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [styles.actionBtn, { backgroundColor: "#2563EB", opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push({ pathname: "/daysheet/new" as any, params: { jobCode: job.jobCode } })}
           >
             <IconSymbol name="doc.badge.plus" size={18} color="#fff" />
@@ -173,12 +173,12 @@ export default function JobDetailScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.actionBtn,
-                { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: "#7F1F1F", opacity: pressed ? 0.85 : 1 },
+                { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: "#1B2A4A", opacity: pressed ? 0.85 : 1 },
               ]}
               onPress={() => router.push("/(tabs)/daysheets" as any)}
             >
-              <IconSymbol name="doc.text.fill" size={18} color="#7F1F1F" />
-              <Text style={[styles.actionBtnText, { color: "#7F1F1F" }]}>
+              <IconSymbol name="doc.text.fill" size={18} color="#1B2A4A" />
+              <Text style={[styles.actionBtnText, { color: "#1B2A4A" }]}>
                 View {linkedSheetCount} Day Sheet{linkedSheetCount !== 1 ? "s" : ""}
               </Text>
             </Pressable>
@@ -259,12 +259,12 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 22,
     fontFamily: "Montserrat_700Bold",
-    color: "#7F1F1F",
+    color: "#1E40AF",
   },
   summaryLabel: {
     fontSize: 12,
     fontFamily: "Montserrat_400Regular",
-    color: "#EF4444",
+    color: "#3B82F6",
   },
   card: {
     margin: 16,
