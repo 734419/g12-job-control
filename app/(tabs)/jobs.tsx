@@ -73,10 +73,10 @@ export default function JobsScreen() {
   return (
     <ScreenContainer containerClassName="bg-background">
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: "#0F2A44" }]}>
+      <View style={[styles.header, { backgroundColor: "#7F1F1F" }]}>
         <View style={styles.headerLeft}>
           <Image
-            source={require("@/assets/images/g12-logo.png")}
+            source={require("@/assets/images/asr-logo.png")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -113,7 +113,7 @@ export default function JobsScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color="#1B2A4A" style={{ marginTop: 40 }} />
+        <ActivityIndicator color="#7F1F1F" style={{ marginTop: 40 }} />
       ) : error ? (
         <View style={styles.emptyState}>
           <IconSymbol name="exclamationmark.triangle.fill" size={40} color="#DC2626" />
@@ -147,7 +147,7 @@ export default function JobsScreen() {
               onPress={() => router.push({ pathname: "/job/[id]" as any, params: { id: item.id } })}
             >
               <View style={styles.jobCardTop}>
-                <View style={[styles.jobCodeBadge, { backgroundColor: "#1B2A4A" }]}>
+                <View style={[styles.jobCodeBadge, { backgroundColor: "#7F1F1F" }]}>
                   <Text style={styles.jobCodeText}>{item.jobCode}</Text>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: `${STATUS_COLORS[item.status] ?? "#6366F1"}18` }]}>
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   },
   retryBtn: {
     marginTop: 16,
-    backgroundColor: "#1B2A4A",
+    backgroundColor: "#7F1F1F",
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 10,

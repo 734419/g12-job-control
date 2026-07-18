@@ -99,7 +99,7 @@ export default function ExportScreen() {
     try {
       const csv = buildXeroCSV(toExport);
       const batchDate = new Date().toISOString().split("T")[0];
-      const filename = `G12-Payroll-${batchDate}.csv`;
+      const filename = `ASR-Payroll-${batchDate}.csv`;
       const xeroRef = `XERO-${batchDate}`;
 
       if (Platform.OS === "web") {
@@ -151,7 +151,7 @@ export default function ExportScreen() {
   return (
     <ScreenContainer containerClassName="bg-background">
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
+      <View style={[styles.header, { backgroundColor: "#7F1F1F" }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <IconSymbol name="chevron.left" size={20} color="#fff" />
         </Pressable>
@@ -160,11 +160,11 @@ export default function ExportScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color="#1B2A4A" style={{ marginTop: 40 }} />
+        <ActivityIndicator color="#7F1F1F" style={{ marginTop: 40 }} />
       ) : (
         <>
           {/* Summary Card */}
-          <View style={[styles.summaryCard, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
+          <View style={[styles.summaryCard, { backgroundColor: "#FFF1F1", borderColor: "#FECACA" }]}>
             <Text style={styles.summaryTitle}>Export Summary</Text>
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
@@ -203,7 +203,7 @@ export default function ExportScreen() {
               <IconSymbol
                 name={selected.size === sheets.length ? "checkmark.square.fill" : "square"}
                 size={20}
-                color="#1B2A4A"
+                color="#7F1F1F"
               />
               <Text style={[styles.selectAllText, { color: colors.foreground }]}>
                 {selected.size === sheets.length ? "Deselect All" : "Select All"}
@@ -236,7 +236,7 @@ export default function ExportScreen() {
                     styles.sheetCard,
                     {
                       backgroundColor: isSelected ? "#F0F9FF" : colors.surface,
-                      borderColor: isSelected ? "#1B2A4A" : colors.border,
+                      borderColor: isSelected ? "#7F1F1F" : colors.border,
                       opacity: pressed ? 0.85 : 1,
                     },
                   ]}
@@ -245,7 +245,7 @@ export default function ExportScreen() {
                     <IconSymbol
                       name={isSelected ? "checkmark.square.fill" : "square"}
                       size={22}
-                      color={isSelected ? "#1B2A4A" : colors.muted}
+                      color={isSelected ? "#7F1F1F" : colors.muted}
                     />
                     <View style={{ flex: 1, marginLeft: 12 }}>
                       <Text style={[styles.workerName, { color: colors.foreground }]}>{item.workerName}</Text>
@@ -254,7 +254,7 @@ export default function ExportScreen() {
                       </Text>
                     </View>
                     <View style={styles.hoursCol}>
-                      <Text style={[styles.hoursMain, { color: "#1B2A4A" }]}>
+                      <Text style={[styles.hoursMain, { color: "#7F1F1F" }]}>
                         {(item.ordinaryHours + item.overtimeHours).toFixed(2)} hrs
                       </Text>
                       {item.overtimeHours > 0 && (
@@ -281,7 +281,7 @@ export default function ExportScreen() {
                 style={({ pressed }) => [
                   styles.exportBtn,
                   {
-                    backgroundColor: selected.size === 0 ? colors.muted : "#1B2A4A",
+                    backgroundColor: selected.size === 0 ? colors.muted : "#7F1F1F",
                     opacity: pressed || exporting ? 0.8 : 1,
                   },
                 ]}
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 13,
     fontFamily: "Montserrat_600SemiBold",
-    color: "#1E40AF",
+    color: "#7F1F1F",
     marginBottom: 12,
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -351,18 +351,18 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 22,
     fontFamily: "Montserrat_700Bold",
-    color: "#1E40AF",
+    color: "#7F1F1F",
   },
   summaryLabel: {
     fontSize: 11,
     fontFamily: "Montserrat_400Regular",
-    color: "#3B82F6",
+    color: "#EF4444",
     marginTop: 2,
   },
   summaryDivider: {
     width: 1,
     height: 36,
-    backgroundColor: "#BFDBFE",
+    backgroundColor: "#FECACA",
   },
   selectAllBtn: {
     flexDirection: "row",

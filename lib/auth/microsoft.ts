@@ -1,5 +1,5 @@
 /**
- * Microsoft Azure AD / MSAL authentication helper for G12 Job Control.
+ * Microsoft Azure AD / MSAL authentication helper for Ausslope Job Control.
  *
  * Uses expo-auth-session with the Microsoft identity platform (v2.0 endpoint).
  * The Azure App Registration Client ID and Tenant ID are loaded from environment
@@ -38,9 +38,9 @@ export const SCOPES = [
   "User.Read",
 ];
 
-const TOKEN_KEY = "g12_ms_token";
-const REFRESH_KEY = "g12_ms_refresh";
-const USER_KEY = "g12_ms_user";
+const TOKEN_KEY = "asr_ms_token";
+const REFRESH_KEY = "asr_ms_refresh";
+const USER_KEY = "asr_ms_user";
 
 export interface MSUser {
   id: string;

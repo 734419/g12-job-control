@@ -24,7 +24,7 @@ export default function LoginScreen() {
       {/* Logo / Brand */}
       <View style={styles.logoContainer}>
         <View style={[styles.logoCircle, { backgroundColor: "rgba(255,255,255,0.12)" }]}>
-          <Text style={styles.logoText}>G12</Text>
+          <Text style={styles.logoText}>ASR</Text>
         </View>
         <Text style={styles.appTitle}>Job Control</Text>
         <Text style={styles.appSubtitle}>Field Operations Platform</Text>
@@ -36,7 +36,7 @@ export default function LoginScreen() {
           Sign in to continue
         </Text>
         <Text style={[styles.cardSubtitle, { color: colors.muted }]}>
-          Use your G12 Group Microsoft 365 account
+          Use your Ausslope Microsoft 365 account
         </Text>
 
         {error ? (
@@ -70,7 +70,7 @@ export default function LoginScreen() {
       </View>
 
       <Text style={styles.footer}>
-        G12 Group · Secure access via Azure AD
+        Ausslope · Australian Slope Retention · Secure access via Azure AD
       </Text>
     </ScreenContainer>
   );
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1B2A4A",
+    backgroundColor: "#7F1F1F",
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 20,

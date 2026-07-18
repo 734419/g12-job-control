@@ -51,7 +51,7 @@ function DocRow({ label, url }: { label: string; url?: string }) {
         <Text
           style={[
             styles.infoValue,
-            { color: hasDoc ? "#1B2A4A" : colors.muted },
+            { color: hasDoc ? "#7F1F1F" : colors.muted },
           ]}
         >
           {hasDoc ? "Document available" : "Not uploaded"}
@@ -127,7 +127,7 @@ export default function SubcontractorDetailScreen() {
   if (loading) {
     return (
       <ScreenContainer>
-        <ActivityIndicator color="#1B2A4A" style={{ marginTop: 40 }} />
+        <ActivityIndicator color="#7F1F1F" style={{ marginTop: 40 }} />
       </ScreenContainer>
     );
   }
@@ -148,7 +148,7 @@ export default function SubcontractorDetailScreen() {
     <ScreenContainer containerClassName="bg-background" edges={["left", "right", "bottom"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
+        <View style={[styles.header, { backgroundColor: "#7F1F1F" }]}>
           <Text style={styles.companyName}>{sub.companyName}</Text>
           <Text style={styles.trade}>{sub.trade}</Text>
           <View style={[styles.complianceBadge, { backgroundColor: compStyle.bg }]}>
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "#1B2A4A",
+    backgroundColor: "#7F1F1F",
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   jobCodeChip: {
-    backgroundColor: "#1B2A4A",
+    backgroundColor: "#7F1F1F",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,

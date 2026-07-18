@@ -89,7 +89,7 @@ export default function DaySheetDetailScreen() {
   if (loading) {
     return (
       <ScreenContainer>
-        <ActivityIndicator color="#1B2A4A" style={{ marginTop: 40 }} />
+        <ActivityIndicator color="#7F1F1F" style={{ marginTop: 40 }} />
       </ScreenContainer>
     );
   }
@@ -110,7 +110,7 @@ export default function DaySheetDetailScreen() {
     <ScreenContainer containerClassName="bg-background" edges={["left", "right", "bottom"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
+        <View style={[styles.header, { backgroundColor: "#7F1F1F" }]}>
           <Text style={styles.headerWorker}>{sheet.workerName}</Text>
           <Text style={styles.headerDate}>{sheet.date} · {sheet.jobCode}</Text>
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
@@ -191,9 +191,9 @@ export default function DaySheetDetailScreen() {
 
 function HoursBox({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <View style={[styles.hoursBox, highlight && { backgroundColor: "#EFF6FF" }]}>
-      <Text style={[styles.hoursBoxLabel, highlight && { color: "#1E40AF" }]}>{label}</Text>
-      <Text style={[styles.hoursBoxValue, highlight && { color: "#1E40AF" }]}>{value}</Text>
+    <View style={[styles.hoursBox, highlight && { backgroundColor: "#FFF1F1" }]}>
+      <Text style={[styles.hoursBoxLabel, highlight && { color: "#7F1F1F" }]}>{label}</Text>
+      <Text style={[styles.hoursBoxValue, highlight && { color: "#7F1F1F" }]}>{value}</Text>
     </View>
   );
 }
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   hoursBoxValue: {
     fontSize: 16,
     fontFamily: "Montserrat_700Bold",
-    color: "#1B2A4A",
+    color: "#7F1F1F",
     marginTop: 4,
   },
   infoRow: {

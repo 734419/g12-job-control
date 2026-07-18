@@ -12,7 +12,7 @@ const MAPPING = {
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
-  // G12 Job Control icons
+  // Ausslope Job Control icons
   "briefcase.fill": "work",
   "doc.text.fill": "description",
   "person.2.fill": "group",

@@ -24,7 +24,7 @@ interface AuthState {
   user: MSUser | null;
   accessToken: string | null;
   /**
-   * True if the signed-in user is a member of the "G12 Job Control" M365 group.
+   * True if the signed-in user is a member of the "Ausslope Job Control" M365 group.
    * Members of this group can approve day sheets and toggle mobilisation.
    */
   isSupervisor: boolean;

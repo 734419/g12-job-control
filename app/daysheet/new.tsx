@@ -198,7 +198,7 @@ export default function NewDaySheetScreen() {
   return (
     <ScreenContainer containerClassName="bg-background" edges={["left", "right", "bottom"]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
+      <View style={[styles.header, { backgroundColor: "#7F1F1F" }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <IconSymbol name="chevron.left" size={20} color="#fff" />
         </Pressable>
@@ -213,7 +213,7 @@ export default function NewDaySheetScreen() {
           <Text style={[styles.fieldLabel, { color: colors.muted }]}>Job *</Text>
           <Pressable
             onPress={() => setJobPickerVisible(true)}
-            style={[styles.pickerBtn, { borderColor: selectedJob ? "#1B2A4A" : colors.border, backgroundColor: colors.surface }]}
+            style={[styles.pickerBtn, { borderColor: selectedJob ? "#7F1F1F" : colors.border, backgroundColor: colors.surface }]}
           >
             {selectedJob ? (
               <View style={{ flex: 1 }}>
@@ -298,7 +298,7 @@ export default function NewDaySheetScreen() {
         </View>
 
         {/* Calculated hours summary */}
-        <View style={[styles.hoursCard, { backgroundColor: "#EFF6FF" }]}>
+        <View style={[styles.hoursCard, { backgroundColor: "#FFF1F1" }]}>
           <View style={styles.hoursRow}>
             <Text style={styles.hoursLabel}>Ordinary Hours</Text>
             <Text style={styles.hoursValue}>{ordinary.toFixed(2)} hrs</Text>
@@ -309,7 +309,7 @@ export default function NewDaySheetScreen() {
               {overtime.toFixed(2)} hrs
             </Text>
           </View>
-          <View style={[styles.hoursRow, { marginTop: 6, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#BFDBFE" }]}>
+          <View style={[styles.hoursRow, { marginTop: 6, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#FECACA" }]}>
             <Text style={[styles.hoursLabel, { fontFamily: "Montserrat_700Bold" }]}>Total Hours</Text>
             <Text style={[styles.hoursValue, { fontFamily: "Montserrat_700Bold" }]}>
               {(ordinary + overtime).toFixed(2)} hrs
@@ -327,7 +327,7 @@ export default function NewDaySheetScreen() {
               style={[
                 styles.allowanceChip,
                 selectedAllowances.includes(a)
-                  ? { backgroundColor: "#1B2A4A" }
+                  ? { backgroundColor: "#7F1F1F" }
                   : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
               ]}
             >
@@ -374,7 +374,7 @@ export default function NewDaySheetScreen() {
           {Platform.OS !== "web" && (
             <Pressable
               onPress={takePhoto}
-              style={({ pressed }) => [styles.photoBtn, { backgroundColor: "#1B2A4A", opacity: pressed ? 0.8 : 1 }]}
+              style={({ pressed }) => [styles.photoBtn, { backgroundColor: "#7F1F1F", opacity: pressed ? 0.8 : 1 }]}
             >
               <IconSymbol name="camera.fill" size={18} color="#fff" />
               <Text style={styles.photoBtnText}>Take Photo</Text>
@@ -398,7 +398,7 @@ export default function NewDaySheetScreen() {
           disabled={saving || uploadingPhoto}
           style={({ pressed }) => [
             styles.submitBtn,
-            { backgroundColor: "#1B2A4A", opacity: pressed || saving || uploadingPhoto ? 0.8 : 1 },
+            { backgroundColor: "#7F1F1F", opacity: pressed || saving || uploadingPhoto ? 0.8 : 1 },
           ]}
         >
           {saving || uploadingPhoto ? (
@@ -417,7 +417,7 @@ export default function NewDaySheetScreen() {
       {/* Job Picker Modal */}
       <Modal visible={jobPickerVisible} animationType="slide" presentationStyle="pageSheet">
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { backgroundColor: "#1B2A4A" }]}>
+          <View style={[styles.modalHeader, { backgroundColor: "#7F1F1F" }]}>
             <Text style={styles.modalTitle}>Select Job</Text>
             <Pressable onPress={() => setJobPickerVisible(false)} style={styles.modalCloseBtn}>
               <IconSymbol name="xmark.circle.fill" size={24} color="rgba(255,255,255,0.7)" />
@@ -439,13 +439,13 @@ export default function NewDaySheetScreen() {
                 style={({ pressed }) => [
                   styles.jobPickerItem,
                   {
-                    backgroundColor: selectedJob?.id === item.id ? "#EFF6FF" : colors.surface,
-                    borderColor: selectedJob?.id === item.id ? "#1B2A4A" : colors.border,
+                    backgroundColor: selectedJob?.id === item.id ? "#FFF1F1" : colors.surface,
+                    borderColor: selectedJob?.id === item.id ? "#7F1F1F" : colors.border,
                     opacity: pressed ? 0.85 : 1,
                   },
                 ]}
               >
-                <View style={[styles.jobCodeBadge, { backgroundColor: "#1B2A4A" }]}>
+                <View style={[styles.jobCodeBadge, { backgroundColor: "#7F1F1F" }]}>
                   <Text style={styles.jobCodeText}>{item.jobCode}</Text>
                 </View>
                 <View style={{ flex: 1, marginTop: 6, gap: 2 }}>
@@ -457,7 +457,7 @@ export default function NewDaySheetScreen() {
                   </Text>
                 </View>
                 {selectedJob?.id === item.id && (
-                  <IconSymbol name="checkmark.circle.fill" size={20} color="#1B2A4A" />
+                  <IconSymbol name="checkmark.circle.fill" size={20} color="#7F1F1F" />
                 )}
               </Pressable>
             )}
@@ -542,12 +542,12 @@ const styles = StyleSheet.create({
   hoursLabel: {
     fontSize: 14,
     fontFamily: "Montserrat_400Regular",
-    color: "#1E40AF",
+    color: "#7F1F1F",
   },
   hoursValue: {
     fontSize: 16,
     fontFamily: "Montserrat_700Bold",
-    color: "#1E40AF",
+    color: "#7F1F1F",
   },
   allowancesGrid: {
     flexDirection: "row",

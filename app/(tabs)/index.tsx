@@ -90,10 +90,10 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: "#0F2A44" }]}>
+        <View style={[styles.header, { backgroundColor: "#7F1F1F" }]}>
           <View style={styles.headerLeft}>
             <Image
-              source={require("@/assets/images/g12-logo.png")}
+              source={require("@/assets/images/asr-logo.png")}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -130,7 +130,7 @@ export default function DashboardScreen() {
 
           {/* Stats cards */}
           {loading ? (
-            <ActivityIndicator color="#1B2A4A" style={{ marginTop: 40 }} />
+            <ActivityIndicator color="#7F1F1F" style={{ marginTop: 40 }} />
           ) : (
             <>
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Overview</Text>
@@ -139,7 +139,7 @@ export default function DashboardScreen() {
                   label="Active Jobs"
                   value={stats.activeJobs}
                   icon="briefcase.fill"
-                  color="#2563EB"
+                  color="#B91C1C"
                   onPress={() => router.push("/jobs")}
                   colors={colors}
                 />
@@ -174,14 +174,14 @@ export default function DashboardScreen() {
                 <QuickAction
                   label="New Day Sheet"
                   icon="doc.badge.plus"
-                  color="#2563EB"
+                  color="#B91C1C"
                   onPress={() => router.push("/daysheet/new")}
                   colors={colors}
                 />
                 <QuickAction
                   label="View Jobs"
                   icon="briefcase.fill"
-                  color="#1B2A4A"
+                  color="#7F1F1F"
                   onPress={() => router.push("/jobs")}
                   colors={colors}
                 />

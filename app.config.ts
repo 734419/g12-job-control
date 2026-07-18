@@ -1,14 +1,14 @@
 import "./scripts/load-env.js";
 import type { ExpoConfig } from "expo/config";
 
-const rawBundleId = "space.manus.g12.jobcontrol.t20260626";
+const rawBundleId = "space.manus.ausslope.jobcontrol.t20260626";
 const bundleId = rawBundleId;
 const timestamp = "20260626";
 const schemeFromBundleId = `manus${timestamp}`;
 
 const env = {
-  appName: "G12 Job Control",
-  appSlug: "g12-job-control",
+  appName: "Ausslope Job Control",
+  appSlug: "ausslope-job-control",
   logoUrl: "",
   scheme: schemeFromBundleId,
   iosBundleId: bundleId,
@@ -33,7 +33,7 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#0F2A44",
+      backgroundColor: "#7F1F1F",
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
@@ -61,8 +61,8 @@ const config: ExpoConfig = {
     [
       "expo-image-picker",
       {
-        photosPermission: "Allow G12 Job Control to access your photos to attach site photos to day sheets.",
-        cameraPermission: "Allow G12 Job Control to take site photos for day sheets.",
+        photosPermission: "Allow Ausslope Job Control to access your photos to attach site photos to day sheets.",
+        cameraPermission: "Allow Ausslope Job Control to take site photos for day sheets.",
       },
     ],
     [
@@ -80,7 +80,7 @@ const config: ExpoConfig = {
         imageWidth: 200,
         resizeMode: "contain",
         backgroundColor: "#ffffff",
-        dark: { backgroundColor: "#0F2A44" },
+        dark: { backgroundColor: "#7F1F1F" },
       },
     ],
     [

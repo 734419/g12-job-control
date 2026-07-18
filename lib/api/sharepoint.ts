@@ -1,5 +1,5 @@
 /**
- * SharePoint Graph API service for G12 Job Control.
+ * SharePoint Graph API service for Ausslope Job Control.
  *
  * Site: https://g12group.sharepoint.com/sites/G12JobControl
  * Site ID: g12group.sharepoint.com,350ccf6f-27ad-4edc-b7a2-e295b71d3ab2,ea9063e3-c201-47fb-90c0-2f44b60a52b4
@@ -25,7 +25,7 @@
  *               Xero_x0020_Reference, Site, Trade, Job_x0020_Name
  *
  * M365 Group for role gating:
- *   "G12 Job Control" → G12JobControl@g12consulting.com.au
+ *   "Ausslope Job Control" → AusslopeJobControl@g12consulting.com.au
  */
 
 import { getStoredToken, refreshAccessToken } from "@/lib/auth/microsoft";
@@ -62,9 +62,9 @@ const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 const SITE_ID =
   "g12group.sharepoint.com,350ccf6f-27ad-4edc-b7a2-e295b71d3ab2,ea9063e3-c201-47fb-90c0-2f44b60a52b4";
 
-// M365 group ID for G12 Job Control (supervisors/managers)
-// Fetched via Graph API: G12JobControl@g12consulting.com.au
-const G12_JOB_CONTROL_GROUP_EMAIL = "G12JobControl@g12consulting.com.au";
+// M365 group ID for Ausslope Job Control (supervisors/managers)
+// Fetched via Graph API: AusslopeJobControl@g12consulting.com.au
+const G12_JOB_CONTROL_GROUP_EMAIL = "AusslopeJobControl@g12consulting.com.au";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -209,7 +209,7 @@ async function updateListItem(
 // ─── Role Gating ──────────────────────────────────────────────────────────────
 
 /**
- * Check if the current user is a member of the G12 Job Control M365 group.
+ * Check if the current user is a member of the Ausslope Job Control M365 group.
  * Members of this group are treated as supervisors with approval permissions.
  */
 export async function checkIsSupervisor(): Promise<boolean> {
@@ -223,7 +223,7 @@ export async function checkIsSupervisor(): Promise<boolean> {
     return groups.some(
       (g) =>
         g.mail?.toLowerCase() === G12_JOB_CONTROL_GROUP_EMAIL.toLowerCase() ||
-        g.displayName === "G12 Job Control"
+        g.displayName === "Ausslope Job Control"
     );
   } catch {
     return false;

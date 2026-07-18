@@ -1,12 +1,12 @@
 /**
- * Offline queue for G12 Job Control.
+ * Offline queue for Ausslope Job Control.
  * Stores pending SharePoint writes in AsyncStorage and replays them on reconnect.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createDaySheet, approveDaySheet, rejectDaySheet, type DaySheet } from "@/lib/api/sharepoint";
 
-const QUEUE_KEY = "g12_offline_queue";
+const QUEUE_KEY = "asr_offline_queue";
 
 export type QueuedAction =
   | { type: "CREATE_DAYSHEET"; payload: Omit<DaySheet, "id">; queuedAt: string }

@@ -63,7 +63,7 @@ export default function ProfileScreen() {
     <ScreenContainer containerClassName="bg-background">
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
+        <View style={[styles.header, { backgroundColor: "#7F1F1F" }]}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
@@ -111,9 +111,9 @@ export default function ProfileScreen() {
         {/* App info */}
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <Text style={[styles.cardTitle, { color: colors.foreground }]}>App Info</Text>
-          <InfoRow label="Platform" value="G12 Job Control" colors={colors} />
-          <InfoRow label="SharePoint Site" value="G12 Job Control" colors={colors} />
-          <InfoRow label="Tenant" value="G12 Group" colors={colors} />
+          <InfoRow label="Platform" value="Ausslope Job Control" colors={colors} />
+          <InfoRow label="SharePoint Site" value="Ausslope Job Control" colors={colors} />
+          <InfoRow label="Tenant" value="Ausslope" colors={colors} />
           <InfoRow label="Version" value="1.0.0" colors={colors} />
         </View>
 
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   syncBtn: {
-    backgroundColor: "#1B2A4A",
+    backgroundColor: "#7F1F1F",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 10,

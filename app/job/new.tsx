@@ -81,7 +81,7 @@ export default function NewJobScreen() {
   return (
     <ScreenContainer containerClassName="bg-background" edges={["left", "right", "bottom"]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: "#1B2A4A" }]}>
+      <View style={[styles.header, { backgroundColor: "#7F1F1F" }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <IconSymbol name="chevron.left" size={20} color="#fff" />
         </Pressable>
@@ -217,7 +217,7 @@ export default function NewJobScreen() {
                 style={[
                   styles.chip,
                   jobType === t
-                    ? { backgroundColor: "#1B2A4A" }
+                    ? { backgroundColor: "#7F1F1F" }
                     : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
                 ]}
               >
@@ -269,7 +269,7 @@ export default function NewJobScreen() {
           disabled={saving}
           style={({ pressed }) => [
             styles.submitBtn,
-            { backgroundColor: "#1B2A4A", opacity: pressed || saving ? 0.8 : 1 },
+            { backgroundColor: "#7F1F1F", opacity: pressed || saving ? 0.8 : 1 },
           ]}
         >
           {saving ? (
