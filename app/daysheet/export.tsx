@@ -14,7 +14,7 @@ import { useState, useEffect, useCallback } from "react";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
-import { getDaySheets, type DaySheet } from "@/lib/api/sharepoint";
+import { getDaySheets, markDaySheetsExported, type DaySheet } from "@/lib/api/sharepoint";
 
 function buildXeroCSV(sheets: DaySheet[]): string {
   const headers = [
@@ -98,7 +98,9 @@ export default function ExportScreen() {
     setExporting(true);
     try {
       const csv = buildXeroCSV(toExport);
-      const filename = `G12-Payroll-${new Date().toISOString().split("T")[0]}.csv`;
+      const batchDate = new Date().toISOString().split("T")[0];
+      const filename = `G12-Payroll-${batchDate}.csv`;
+      const xeroRef = `XERO-${batchDate}`;
 
       if (Platform.OS === "web") {
         // Web: trigger download via data URI
@@ -109,7 +111,6 @@ export default function ExportScreen() {
         a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
-        Alert.alert("Exported", `${toExport.length} day sheet${toExport.length !== 1 ? "s" : ""} exported as ${filename}.`);
       } else {
         // Mobile: share the CSV text
         await Share.share({
@@ -117,6 +118,23 @@ export default function ExportScreen() {
           message: csv,
         });
       }
+
+      // Write export status back to SharePoint so these sheets no longer appear
+      // in the export queue on the next load.
+      const ids = toExport.map((s) => s.id);
+      const writeBack = await markDaySheetsExported(ids, xeroRef);
+
+      // Remove exported sheets from the local list immediately
+      setSheets((prev) => prev.filter((s) => !selected.has(s.id)));
+      setSelected(new Set());
+
+      const failNote = writeBack.failed > 0
+        ? `\n(${writeBack.failed} item${writeBack.failed !== 1 ? "s" : ""} could not be marked in SharePoint — they will reappear next time.)`
+        : "";
+      Alert.alert(
+        "Exported",
+        `${toExport.length} day sheet${toExport.length !== 1 ? "s" : ""} exported as ${filename}.${failNote}`
+      );
     } catch {
       Alert.alert("Export Failed", "Could not generate the export file.");
     } finally {

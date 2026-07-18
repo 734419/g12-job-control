@@ -52,8 +52,13 @@ export default function DaySheetDetailScreen() {
     if (!sheet || !user) return;
     setActioning(true);
     try {
+      const today = new Date().toISOString().split("T")[0];
       await approveDaySheet(sheet.id, user.displayName);
-      setSheet((prev) => prev ? { ...prev, approvalStatus: "Approved" } : prev);
+      setSheet((prev) =>
+        prev
+          ? { ...prev, approvalStatus: "Approved", approvedBy: user.displayName, approvedDate: today }
+          : prev
+      );
       Alert.alert("Approved", "Day sheet has been approved.");
     } catch {
       Alert.alert("Error", "Could not approve. Check your connection.");
@@ -66,8 +71,13 @@ export default function DaySheetDetailScreen() {
     if (!sheet || !user) return;
     setActioning(true);
     try {
+      const today = new Date().toISOString().split("T")[0];
       await rejectDaySheet(sheet.id, user.displayName);
-      setSheet((prev) => prev ? { ...prev, approvalStatus: "Rejected" } : prev);
+      setSheet((prev) =>
+        prev
+          ? { ...prev, approvalStatus: "Rejected", approvedBy: user.displayName, approvedDate: today }
+          : prev
+      );
       Alert.alert("Rejected", "Day sheet has been rejected.");
     } catch {
       Alert.alert("Error", "Could not reject. Check your connection.");

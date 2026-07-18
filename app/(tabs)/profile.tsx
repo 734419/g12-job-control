@@ -27,10 +27,16 @@ export default function ProfileScreen() {
     setSyncing(true);
     try {
       const result = await flushQueue();
-      setQueueCount(0);
+      // Re-read the actual remaining count (failed items stay in the queue)
+      const remaining = await getQueueCount();
+      setQueueCount(remaining);
       Alert.alert(
-        "Sync Complete",
-        `${result.success} item${result.success !== 1 ? "s" : ""} synced.${result.failed > 0 ? ` ${result.failed} failed.` : ""}`
+        result.failed > 0 ? "Sync Partial" : "Sync Complete",
+        `${result.success} item${result.success !== 1 ? "s" : ""} synced.${
+          result.failed > 0
+            ? ` ${result.failed} item${result.failed !== 1 ? "s" : ""} failed and will retry next time.`
+            : ""
+        }`
       );
     } catch {
       Alert.alert("Sync Failed", "Could not sync. Check your connection.");

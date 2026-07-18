@@ -56,13 +56,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Build the correct redirect URI for each platform/environment:
   //   Web            → https://<host>/oauth/callback  (SPA flow)
-  //   Expo Go        → exp://8081-ia7j6j1amjoucogwn0wp5-c64336ba.sg1.manus.computer (registered in Azure Mobile/Desktop)
-  //   Standalone app → manus20260626://auth           (custom scheme, registered in Azure iOS/macOS)
+  //   Expo Go        → exp://<hostUri>  (derived dynamically from the Metro manifest)
+  //   Standalone app → manus20260626://auth  (custom scheme, registered in Azure iOS/macOS)
   const isExpoGo = Constants.appOwnership === "expo";
+
+  // Derive the Expo Go redirect URI dynamically from the manifest hostUri so it
+  // works regardless of which Manus sandbox is running.
+  const hostUri: string =
+    (Constants.expoConfig?.hostUri as string | undefined) ??
+    (Constants.manifest2?.extra?.expoClient?.hostUri as string | undefined) ??
+    "";
+  // Strip any trailing port from the hostUri — Expo Go uses the bare host
+  const expoGoHost = hostUri.replace(/:\d+$/, "");
+  const expoGoRedirectUri = expoGoHost ? `exp://${expoGoHost}` : AuthSession.makeRedirectUri();
+
   const redirectUri = Platform.OS === "web"
     ? AuthSession.makeRedirectUri({ path: "oauth/callback" })
     : isExpoGo
-      ? "exp://8081-ia7j6j1amjoucogwn0wp5-c64336ba.sg1.manus.computer"
+      ? expoGoRedirectUri
       : AuthSession.makeRedirectUri({ scheme: "manus20260626", path: "auth" });
 
   /** Check M365 group membership and cache the result */

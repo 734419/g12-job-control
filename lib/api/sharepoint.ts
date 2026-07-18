@@ -381,6 +381,41 @@ export async function rejectDaySheet(id: string, approvedBy: string, reason?: st
   });
 }
 
+/**
+ * Mark one or more day sheets as exported in SharePoint.
+ * Sets Payroll_Export_Status to "Exported" and records a Xero reference.
+ *
+ * @param ids - Array of SharePoint item IDs to mark exported
+ * @param xeroReference - Optional reference string (e.g. batch date or Xero batch ID)
+ */
+export async function markDaySheetsExported(
+  ids: string[],
+  xeroReference?: string
+): Promise<{ success: number; failed: number }> {
+  const ref = xeroReference ?? `XERO-${new Date().toISOString().split("T")[0]}`;
+  let success = 0;
+  let failed = 0;
+  await Promise.allSettled(
+    ids.map(async (id) => {
+      try {
+        // Skip demo data — IDs starting with "demo-" are not in SharePoint
+        if (id.startsWith("demo-")) {
+          success++;
+          return;
+        }
+        await updateListItem("Day Sheets", id, {
+          Payroll_x0020_Export_x0020_Status: "Exported",
+          Xero_x0020_Reference: ref,
+        });
+        success++;
+      } catch {
+        failed++;
+      }
+    })
+  );
+  return { success, failed };
+}
+
 // ─── Photo Upload ─────────────────────────────────────────────────────────────
 
 /**

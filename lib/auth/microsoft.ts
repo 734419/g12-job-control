@@ -15,6 +15,7 @@ import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import { getApiBaseUrl } from "@/constants/oauth";
+import Constants from "expo-constants";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -77,9 +78,25 @@ export async function exchangeCodeForToken(
   // On mobile (Expo Go / native), Microsoft blocks direct fetch with AADSTS9002326,
   // so we proxy the exchange through our own server.
   if (Platform.OS !== "web") {
-    // On mobile (Expo Go), window.location is not available so getApiBaseUrl() returns empty.
-    // Use the known Manus sandbox API server URL directly.
-    const apiBase = "https://3000-ia7j6j1amjoucogwn0wp5-c64336ba.sg1.manus.computer";
+    // On mobile (Expo Go / native), derive the API base from the Expo manifest
+    // hostUri (which reflects the current Metro tunnel/LAN address), then swap
+    // the Metro port (8081) for the API server port (3000).  If that is not
+    // available fall back to the EXPO_PUBLIC_API_BASE_URL env var, and finally
+    // to the relative path (works when bundled against a known server URL).
+    const hostUri: string =
+      (Constants.expoConfig?.hostUri as string | undefined) ??
+      (Constants.manifest2?.extra?.expoClient?.hostUri as string | undefined) ??
+      "";
+    let apiBase = getApiBaseUrl();
+    if (!apiBase && hostUri) {
+      // hostUri is like "8081-sandboxid.region.manus.computer" (no protocol)
+      const apiHost = hostUri.replace(/^8081-/, "3000-").replace(/:\d+$/, "");
+      apiBase = `https://${apiHost}`;
+    }
+    if (!apiBase) {
+      // Last resort: same origin (only works in a bundled/deployed context)
+      apiBase = "";
+    }
     const res = await fetch(`${apiBase}/api/auth/token-exchange`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
