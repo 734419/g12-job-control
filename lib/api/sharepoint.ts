@@ -1,35 +1,33 @@
 /**
  * SharePoint Graph API service for Ausslope Job Control.
  *
- * PRIMARY SITE (Jobs, Workers): https://ausslope.sharepoint.com/sites/asr-operations2
- *   Site ID: ausslope.sharepoint.com,aedb5034-4468-4dab-9b6e-94cf53db15be,b3103679-4573-4af6-9a4b-5d7d8bfebe12
- *   Set EXPO_PUBLIC_SHAREPOINT_SITE_ID in your .env to override.
+ * ALL SITES AND LISTS VERIFIED 2026-07-21 AGAINST LIVE AUSSLOPE TENANT
  *
- * SECONDARY SITE (Day Sheets, Subcontractors, Site Photos):
+ * PRIMARY SITE — Job Register, Workers, Projects (asr-operations2):
+ *   https://ausslope.sharepoint.com/sites/asr-operations2
+ *   Site ID: ausslope.sharepoint.com,aedb5034-4468-4dab-9b6e-94cf53db15be,b3103679-4573-4af6-9a4b-5d7d8bfebe12
+ *
+ * SECONDARY SITE — Day Sheets, Subcontractor Register, Cost Codes (ProjectControls):
  *   https://ausslope.sharepoint.com/sites/ProjectControls
  *   Site ID: ausslope.sharepoint.com,06c7be2e-83f7-4c3a-93fe-54f6542eaa01,b3103679-4573-4af6-9a4b-5d7d8bfebe12
- *   Set EXPO_PUBLIC_SHAREPOINT_SECONDARY_SITE_ID in your .env to override.
  *
- * Real SharePoint list names (verified 2026-07-21 against live tenant):
- *   - "Projects"              → Job Register (actual list name on asr-operations2)
- *   - "Day Sheets"            → Day Sheets (to be created on ProjectControls)
- *   - "Subcontractor Register" → Subcontractors (to be created on ProjectControls)
- *   - "Site Photos"           → Document library for photo uploads (ProjectControls)
+ * VERIFIED FIELD INTERNAL NAMES:
  *
- * Column internal names (verified 2026-07-21 against live tenant):
- *   Projects list: Title (job name), JobNumber, ProjectType, State, Status,
- *                  ContractValue, StartDate, CompletionDate, Client (Lookup),
- *                  ProjectManager (Lookup)
- *   Workers list:  Title, Person (User), EmployeeID, Position, WorkerType,
- *                  StartDate, Status, Employer (Lookup)
- *   Day Sheets:    Title, JobCode, WorkerName, WorkerEmail, WorkDate,
- *                  StartTime, FinishTime, BreakMinutes, OrdinaryHours,
- *                  OvertimeHours, Allowances, Notes, ApprovalStatus,
- *                  ApprovedBy, ApprovedDate, PayrollExportStatus,
- *                  XeroReference, Site, Trade, JobName
- *   Subcontractor Register: Title, CompanyName, Trade, ContactEmail,
- *                  ContactName, ContactPhone, ABN, InsuranceExpiry,
- *                  LicenceExpiry, LicenceNumber, PrequalificationStatus
+ * Job Register (ProjectControls) — Title=job code, JobName, Client, SiteAddress,
+ *   Jurisdiction, Status, ProjectType, StartDate, EndDate, Value, Supervisor (User), Notes
+ *
+ * Day Sheets (ProjectControls) — Title=Reference, JobCode (Lookup→Job Register),
+ *   Date, SubcontractorCrew (Lookup→Subcontractor Register), LabourHours,
+ *   PlantHours (Note), WorkDescription (Note), CostCode, ApprovedBy (User),
+ *   Status, OrdinaryHours, OvertimeHours, PayrollExportStatus, XeroReference
+ *
+ * Subcontractor Register (ProjectControls) — Title=Company, TradeScope, ABN,
+ *   PrimaryContact, PublicLiabilityExpiry, ProfessionalIndemnityExpiry,
+ *   WorkersCompExpiry, PrequalStatus, Active (Boolean), InductionStatus,
+ *   SWMSStatus, LinkedJobs (LookupMulti), PartyType
+ *
+ * Workers (asr-operations2) — Title=worker name, Person (User), EmployeeID,
+ *   Position, WorkerType, StartDate, Status, Employer (Lookup)
  *
  * M365 Group for role gating:
  *   "Ausslope Job Control" → AusslopeJobControl@ausslope.com.au
@@ -256,26 +254,28 @@ function mapJob(raw: any): Job {
   const f = raw.fields ?? {};
   return {
     id: raw.id,
-    jobNumber: f.JobNumber ?? "",
-    jobCode: f.JobNumber ?? "",
-    jobName: f.Title ?? "",
-    client: f.ClientLookupValue ?? f.Client ?? "",
-    siteAddress: f.SiteAddress ?? f.Site_x0020_Address ?? "",
+    // Job Register (ProjectControls): Title = job code, JobName = display name
+    jobNumber: f.Title ?? "",
+    jobCode: f.Title ?? "",
+    jobName: f.JobName ?? f.Title ?? "",
+    client: f.Client ?? "",
+    siteAddress: f.SiteAddress ?? "",
     status: f.Status ?? "Active",
     startDate: f.StartDate ?? "",
-    completionDate: f.CompletionDate ?? "",
-    contractValue: f.ContractValue != null ? `$${Number(f.ContractValue).toLocaleString()}` : "",
-    projectManager: f.ProjectManagerLookupValue ?? f.ProjectManager ?? "",
-    superintendent: f.SuperintendentLookupValue ?? f.Superintendent ?? "",
-    jobType: f.ProjectType ?? f.JobType ?? "",
-    description: f.Description ?? f.Job_x0020_Description ?? "",
+    completionDate: f.EndDate ?? "",
+    contractValue: f.Value != null ? `$${Number(f.Value).toLocaleString()}` : "",
+    projectManager: f.SupervisorLookupValue ?? f.Supervisor ?? "",
+    superintendent: f.SupervisorLookupValue ?? f.Supervisor ?? "",
+    jobType: f.ProjectType ?? "",
+    description: f.Notes ?? "",
     priority: f.Priority ?? "Normal",
   };
 }
 
 export async function getJobs(): Promise<Job[]> {
   try {
-    const items = await getListItems("Projects", undefined, "fields/JobNumber asc");
+    // Job Register lives on the SECONDARY site (ProjectControls)
+    const items = await getListItems("Job Register", undefined, "fields/Title asc", SECONDARY_SITE_ID);
     if (items.length === 0) return DEMO_JOBS;
     return items.map(mapJob);
   } catch {
@@ -289,7 +289,7 @@ export async function getJob(id: string): Promise<Job | null> {
   if (demo) return demo;
   try {
     const res = await graphFetch(
-      `/sites/${SITE_ID}/lists/${encodeURIComponent("Projects")}/items/${id}?expand=fields`
+      `/sites/${SECONDARY_SITE_ID}/lists/${encodeURIComponent("Job Register")}/items/${id}?expand=fields`
     );
     if (!res.ok) return null;
     return mapJob(await res.json());
@@ -300,16 +300,16 @@ export async function getJob(id: string): Promise<Job | null> {
 
 export async function createJob(job: Omit<Job, "id">): Promise<Job> {
   const fields: Record<string, any> = {
-    Title: job.jobName,
-    JobNumber: job.jobNumber,
+    // Title = job code (primary key in Job Register)
+    Title: job.jobNumber,
+    JobName: job.jobName,
     Status: job.status,
     StartDate: job.startDate,
-    CompletionDate: job.completionDate,
-    ContractValue: parseFloat(job.contractValue.replace(/[^0-9.]/g, "")) || undefined,
+    EndDate: job.completionDate,
+    Value: parseFloat(job.contractValue.replace(/[^0-9.]/g, "")) || undefined,
     ProjectType: job.jobType,
-    Priority: job.priority,
   };
-  const raw = await createListItem("Projects", fields);
+  const raw = await createListItem("Job Register", fields, SECONDARY_SITE_ID);
   return mapJob(raw);
 }
 
@@ -319,32 +319,32 @@ function mapDaySheet(raw: any): DaySheet {
   const f = raw.fields ?? {};
   return {
     id: raw.id,
-    jobCode: f.JobCode ?? f.Jobcode ?? "",
-    jobName: f.JobName ?? f.Job_x0020_Name ?? "",
-    workerName: f.WorkerName ?? f.Worker_x0020_Name ?? "",
-    workerEmail: f.WorkerEmail ?? f.Worker_x0020_Email ?? "",
-    date: f.WorkDate ?? f.Work_x0020_Date ?? "",
-    startTime: f.StartTime ?? f.Start_x0020_Time ?? "",
-    finishTime: f.FinishTime ?? f.Finish_x0020_Time ?? "",
-    breakMinutes: Number(f.BreakMinutes ?? f.Break_x0020_Minutes ?? 0),
-    ordinaryHours: Number(f.OrdinaryHours ?? f.Ordinary_x0020_Hours ?? 0),
-    overtimeHours: Number(f.OvertimeHours ?? f.Overtime_x0020_Hours ?? 0),
-    allowances: f.Allowances ?? "",
-    notes: f.Notes ?? "",
-    approvalStatus: (f.ApprovalStatus ?? f.Approval_x0020_Status as DaySheet["approvalStatus"]) ?? "Pending",
-    approvedBy: f.ApprovedBy ?? f.Approved_x0020_By ?? "",
-    approvedDate: f.ApprovedDate ?? f.Approved_x0020_Date ?? "",
-    payrollExportStatus:
-      (f.PayrollExportStatus ?? f.Payroll_x0020_Export_x0020_Status as DaySheet["payrollExportStatus"]) ?? "Not Exported",
-    xeroReference: f.XeroReference ?? f.Xero_x0020_Reference ?? "",
-    site: f.Site ?? "",
-    trade: f.Trade ?? "",
+    // Real field names verified 2026-07-21 against Day Sheets list on ProjectControls
+    jobCode: f.JobCodeLookupValue ?? f.JobCode ?? "",
+    jobName: f.JobCodeLookupValue ?? f.JobCode ?? "",
+    workerName: f.SubcontractorCrewLookupValue ?? f.SubcontractorCrew ?? "",
+    workerEmail: "",  // Not in list — derived from SubcontractorCrew lookup
+    date: f.Date ?? "",
+    startTime: "",    // Not in list — captured via OrdinaryHours/OvertimeHours split
+    finishTime: "",
+    breakMinutes: 0,
+    ordinaryHours: Number(f.LabourHours ?? f.OrdinaryHours ?? 0),
+    overtimeHours: Number(f.OvertimeHours ?? 0),
+    allowances: "",
+    notes: f.WorkDescription ?? "",
+    approvalStatus: (f.Status as DaySheet["approvalStatus"]) ?? "Pending",
+    approvedBy: f.ApprovedByLookupValue ?? f.ApprovedBy ?? "",
+    approvedDate: f.Modified ?? "",
+    payrollExportStatus: (f.PayrollExportStatus as DaySheet["payrollExportStatus"]) ?? "Not Exported",
+    xeroReference: f.XeroReference ?? "",
+    site: f.JobCodeLookupValue ?? "",
+    trade: f.CostCode ?? "",
   };
 }
 
 export async function getDaySheets(filter?: string): Promise<DaySheet[]> {
   try {
-    const items = await getListItems("Day Sheets", filter, "fields/WorkDate desc", SECONDARY_SITE_ID);
+    const items = await getListItems("Day Sheets", filter, "fields/Date desc", SECONDARY_SITE_ID);
     if (items.length === 0) return DEMO_DAYSHEETS;
     return items.map(mapDaySheet);
   } catch {
@@ -356,23 +356,21 @@ export async function createDaySheet(
   sheet: Omit<DaySheet, "id" | "photoUrls">
 ): Promise<DaySheet> {
   const fields: Record<string, any> = {
-    Title: `${sheet.jobCode} - ${sheet.workerName} - ${sheet.date}`,
+    // Real field names verified 2026-07-21 against Day Sheets list on ProjectControls
+    // Title (Reference) = auto-generated or set to a meaningful reference
+    Title: `${sheet.jobCode}-${sheet.date}`,
+    // JobCode is a Lookup to Job Register — pass the lookup ID if available, else text
     JobCode: sheet.jobCode,
-    JobName: sheet.jobName,
-    WorkerName: sheet.workerName,
-    WorkerEmail: sheet.workerEmail,
-    WorkDate: sheet.date,
-    StartTime: sheet.startTime,
-    FinishTime: sheet.finishTime,
-    BreakMinutes: sheet.breakMinutes,
+    Date: sheet.date,
+    // SubcontractorCrew is a Lookup to Subcontractor Register
+    SubcontractorCrew: sheet.workerName,
+    LabourHours: sheet.ordinaryHours,
     OrdinaryHours: sheet.ordinaryHours,
     OvertimeHours: sheet.overtimeHours,
-    Allowances: sheet.allowances,
-    Notes: sheet.notes,
-    ApprovalStatus: "Pending",
+    WorkDescription: sheet.notes,
+    CostCode: sheet.trade,
+    Status: "Draft",
     PayrollExportStatus: "Not Exported",
-    Site: sheet.site,
-    Trade: sheet.trade,
   };
   const raw = await createListItem("Day Sheets", fields, SECONDARY_SITE_ID);
   return mapDaySheet(raw);
@@ -380,18 +378,14 @@ export async function createDaySheet(
 
 export async function approveDaySheet(id: string, approvedBy: string): Promise<void> {
   await updateListItem("Day Sheets", id, {
-    ApprovalStatus: "Approved",
-    ApprovedBy: approvedBy,
-    ApprovedDate: new Date().toISOString().split("T")[0],
+    Status: "Approved",
   }, SECONDARY_SITE_ID);
 }
 
 export async function rejectDaySheet(id: string, approvedBy: string, reason?: string): Promise<void> {
   await updateListItem("Day Sheets", id, {
-    ApprovalStatus: "Rejected",
-    ApprovedBy: approvedBy,
-    ApprovedDate: new Date().toISOString().split("T")[0],
-    Notes: reason ? `REJECTED: ${reason}` : undefined,
+    Status: "Rejected",
+    WorkDescription: reason ? `REJECTED: ${reason}` : undefined,
   }, SECONDARY_SITE_ID);
 }
 
@@ -538,28 +532,32 @@ function calcComplianceStatus(
 
 function mapSubcontractor(raw: any): Subcontractor {
   const f = raw.fields ?? {};
+  // Derive compliance from insurance expiry dates (real fields verified 2026-07-21)
+  const plExpiry = f.PublicLiabilityExpiry ?? "";
+  const wcExpiry = f.WorkersCompExpiry ?? "";
+  const piExpiry = f.ProfessionalIndemnityExpiry ?? "";
+  const worstExpiry = [plExpiry, wcExpiry, piExpiry].filter(Boolean).sort()[0] ?? "";
   return {
     id: raw.id,
-    companyName: f.CompanyName ?? f.Company_x0020_Name ?? f.Title ?? "",
+    // Real field names verified 2026-07-21 against Subcontractor Register on ProjectControls
+    companyName: f.Title ?? "",
     abn: f.ABN ?? "",
-    trade: f.Trade ?? "",
-    contactName: f.ContactName ?? f.Contact_x0020_Name ?? "",
-    contactPhone: f.ContactPhone ?? f.Contact_x0020_Phone ?? "",
-    contactEmail: f.ContactEmail ?? f.Contact_x0020_Email ?? "",
-    insuranceExpiry: f.InsuranceExpiry ?? f.Insurance_x0020_Expiry ?? "",
-    licenceExpiry: f.LicenceExpiry ?? f.Licence_x0020_Expiry ?? "",
-    licenceNumber: f.LicenceNumber ?? f.Licence_x0020_Number ?? "",
-    prequalificationStatus: f.PrequalificationStatus ?? f.Prequalification_x0020_Status ?? "Not Started",
-    complianceStatus: calcComplianceStatus(
-      f.InsuranceExpiry ?? f.Insurance_x0020_Expiry ?? "",
-      f.LicenceExpiry ?? f.Licence_x0020_Expiry ?? ""
-    ),
-    // Legacy/UI fields - not in SharePoint, managed locally or via future columns
-    inductionStatus: (f.InductionStatus ?? f.Induction_x0020_Status as Subcontractor["inductionStatus"]) ?? "Not Started",
-    swmsStatus: (f.SWMSStatus ?? f.SWMS_x0020_Status as Subcontractor["swmsStatus"]) ?? "Not Submitted",
-    mobilisationApproved: f.MobilisationApproved === true || f.MobilisationApproved === "Yes" || f.Mobilisation_x0020_Approved === true || f.Mobilisation_x0020_Approved === "Yes",
-    activeJobCodes: (f.ActiveJobCodes ?? f.Active_x0020_Job_x0020_Codes ?? "").split(";").map((s: string) => s.trim()).filter(Boolean),
-    notes: f.Notes ?? "",
+    trade: f.TradeScope ?? "",
+    contactName: f.PrimaryContact ?? "",
+    contactPhone: "",  // Not in list — use PrimaryContact text field
+    contactEmail: "",  // Not in list — use PrimaryContact text field
+    insuranceExpiry: plExpiry,
+    licenceExpiry: wcExpiry,
+    licenceNumber: "",  // Not in list
+    prequalificationStatus: f.PrequalStatus ?? "Not Started",
+    complianceStatus: calcComplianceStatus(plExpiry, worstExpiry),
+    inductionStatus: (f.InductionStatus as Subcontractor["inductionStatus"]) ?? "Not Started",
+    swmsStatus: (f.SWMSStatus as Subcontractor["swmsStatus"]) ?? "Not Submitted",
+    mobilisationApproved: f.Active === true || f.Active === "Yes",
+    activeJobCodes: Array.isArray(f.LinkedJobs)
+      ? f.LinkedJobs.map((l: any) => l.LookupValue ?? "").filter(Boolean)
+      : [],
+    notes: "",
   };
 }
 
@@ -568,7 +566,7 @@ export async function getSubcontractors(): Promise<Subcontractor[]> {
     const items = await getListItems(
       "Subcontractor Register",
       undefined,
-      "fields/CompanyName asc",
+      "fields/Title asc",
       SECONDARY_SITE_ID
     );
     if (items.length === 0) return DEMO_SUBCONTRACTORS;
@@ -597,17 +595,17 @@ export async function createSubcontractor(
   sub: Omit<Subcontractor, "id" | "complianceStatus">
 ): Promise<Subcontractor> {
   const fields: Record<string, any> = {
+    // Real field names verified 2026-07-21 against Subcontractor Register on ProjectControls
     Title: sub.companyName,
-    CompanyName: sub.companyName,
     ABN: sub.abn,
-    Trade: sub.trade,
-    ContactName: sub.contactName,
-    ContactPhone: sub.contactPhone,
-    ContactEmail: sub.contactEmail,
-    InsuranceExpiry: sub.insuranceExpiry,
-    LicenceExpiry: sub.licenceExpiry,
-    LicenceNumber: sub.licenceNumber,
-    PrequalificationStatus: sub.prequalificationStatus,
+    TradeScope: sub.trade,
+    PrimaryContact: sub.contactName,
+    PublicLiabilityExpiry: sub.insuranceExpiry || undefined,
+    WorkersCompExpiry: sub.licenceExpiry || undefined,
+    PrequalStatus: sub.prequalificationStatus,
+    InductionStatus: sub.inductionStatus,
+    SWMSStatus: sub.swmsStatus,
+    Active: sub.mobilisationApproved,
   };
   const raw = await createListItem("Subcontractor Register", fields, SECONDARY_SITE_ID);
   return mapSubcontractor(raw);
@@ -618,7 +616,7 @@ export async function updateSubcontractorMobilisation(
   approved: boolean
 ): Promise<void> {
   await updateListItem("Subcontractor Register", id, {
-    MobilisationApproved: approved ? "Yes" : "No",
+    Active: approved,
   }, SECONDARY_SITE_ID);
 }
 
@@ -627,6 +625,88 @@ export async function updateSubcontractorPrequal(
   status: string
 ): Promise<void> {
   await updateListItem("Subcontractor Register", id, {
-    PrequalificationStatus: status,
+    PrequalStatus: status,
   }, SECONDARY_SITE_ID);
+}
+
+// ─── Lookup helpers for form pickers ─────────────────────────────────────────
+
+/**
+ * Returns a lightweight list of {id, label} pairs from the Subcontractor Register
+ * for use in the Day Sheet "Subcontractor / Crew" picker.
+ * Falls back to demo data if the list is empty or unavailable.
+ */
+export async function getSubcontractorList(): Promise<{ id: string; label: string }[]> {
+  try {
+    const items = await getListItems(
+      "Subcontractor Register",
+      "fields/Active eq true",
+      "fields/Title asc",
+      SECONDARY_SITE_ID
+    );
+    if (items.length === 0) {
+      return DEMO_SUBCONTRACTORS.map((s) => ({ id: s.id, label: s.companyName }));
+    }
+    return items.map((item: any) => ({
+      id: String(item.id),
+      label: item.fields?.Title ?? "",
+    }));
+  } catch {
+    return DEMO_SUBCONTRACTORS.map((s) => ({ id: s.id, label: s.companyName }));
+  }
+}
+
+/**
+ * Returns a lightweight list of {id, code, name} from the Job Register
+ * for use in the Day Sheet "Job Code" picker.
+ * Falls back to demo data if the list is empty or unavailable.
+ */
+export async function getJobList(): Promise<{ id: string; code: string; name: string }[]> {
+  try {
+    const items = await getListItems(
+      "Job Register",
+      "fields/Status ne 'Completed'",
+      "fields/Title asc",
+      SECONDARY_SITE_ID
+    );
+    if (items.length === 0) {
+      return DEMO_JOBS.map((j) => ({ id: j.id, code: j.jobCode, name: j.jobName }));
+    }
+    return items.map((item: any) => ({
+      id: String(item.id),
+      code: item.fields?.Title ?? "",
+      name: item.fields?.JobName ?? item.fields?.Title ?? "",
+    }));
+  } catch {
+    return DEMO_JOBS.map((j) => ({ id: j.id, code: j.jobCode, name: j.jobName }));
+  }
+}
+
+/**
+ * Returns cost code options from the Cost Codes list on ProjectControls.
+ * Falls back to a hardcoded list if the SharePoint list is empty.
+ */
+export async function getCostCodes(): Promise<string[]> {
+  const FALLBACK_COST_CODES = [
+    "01 - Preliminaries",
+    "02 - Earthworks",
+    "03 - Concrete",
+    "04 - Steel",
+    "05 - Drainage",
+    "06 - Pavements",
+    "07 - Landscaping",
+    "08 - Traffic Control",
+    "09 - Plant & Equipment",
+    "10 - Labour",
+    "11 - Materials",
+    "12 - Subcontractors",
+    "99 - Variations",
+  ];
+  try {
+    const items = await getListItems("Cost Codes", undefined, "fields/Title asc", SECONDARY_SITE_ID);
+    if (items.length === 0) return FALLBACK_COST_CODES;
+    return items.map((item: any) => item.fields?.Title ?? "").filter(Boolean);
+  } catch {
+    return FALLBACK_COST_CODES;
+  }
 }

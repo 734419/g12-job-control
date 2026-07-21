@@ -19,7 +19,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { createDaySheet, uploadSitePhoto, getJobs, type Job } from "@/lib/api/sharepoint";
+import { createDaySheet, uploadSitePhoto, getJobs, getSubcontractorList, getCostCodes, type Job } from "@/lib/api/sharepoint";
 import { enqueue } from "@/lib/offline/queue";
 
 const ALLOWANCES = [
@@ -59,7 +59,14 @@ export default function NewDaySheetScreen() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [jobPickerVisible, setJobPickerVisible] = useState(false);
-  const [workerName, setWorkerName] = useState(user?.displayName ?? "");
+  // Subcontractor / Crew picker
+  const [subcontractors, setSubcontractors] = useState<{ id: string; label: string }[]>([]);
+  const [selectedSubcontractor, setSelectedSubcontractor] = useState<{ id: string; label: string } | null>(null);
+  const [subPickerVisible, setSubPickerVisible] = useState(false);
+  // Cost Code picker
+  const [costCodes, setCostCodes] = useState<string[]>([]);
+  const [selectedCostCode, setSelectedCostCode] = useState("");
+  const [costCodePickerVisible, setCostCodePickerVisible] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [startTime, setStartTime] = useState("07:00");
   const [finishTime, setFinishTime] = useState("15:30");
@@ -82,6 +89,8 @@ export default function NewDaySheetScreen() {
         if (match) setSelectedJob(match);
       }
     });
+    getSubcontractorList().then(setSubcontractors);
+    getCostCodes().then(setCostCodes);
   }, [params.jobCode]);
 
   const toggleAllowance = (a: string) => {
@@ -135,15 +144,15 @@ export default function NewDaySheetScreen() {
       Alert.alert("Validation", "Please select a Job.");
       return;
     }
-    if (!workerName.trim()) {
-      Alert.alert("Validation", "Please enter the worker name.");
+    if (!selectedSubcontractor) {
+      Alert.alert("Validation", "Please select a Subcontractor / Crew.");
       return;
     }
     setSaving(true);
     const sheet = {
       jobCode: selectedJob.jobCode,
       jobName: selectedJob.jobName,
-      workerName: workerName.trim(),
+      workerName: selectedSubcontractor.label,
       workerEmail: user?.mail ?? "",
       date,
       startTime,
@@ -159,7 +168,7 @@ export default function NewDaySheetScreen() {
       payrollExportStatus: "Not Exported" as const,
       xeroReference: "",
       site: selectedJob.siteAddress ?? "",
-      trade: "",
+      trade: selectedCostCode,
     };
 
     try {
@@ -232,16 +241,22 @@ export default function NewDaySheetScreen() {
         </View>
 
         {/* Worker Name */}
+        {/* Subcontractor / Crew Picker */}
         <View style={{ gap: 6 }}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Worker Name *</Text>
-          <TextInput
-            style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]}
-            value={workerName}
-            onChangeText={setWorkerName}
-            placeholder="Full name"
-            placeholderTextColor={colors.muted}
-            returnKeyType="done"
-          />
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Subcontractor / Crew *</Text>
+          <Pressable
+            onPress={() => setSubPickerVisible(true)}
+            style={[styles.pickerBtn, { borderColor: selectedSubcontractor ? "#7F1F1F" : colors.border, backgroundColor: colors.surface }]}
+          >
+            {selectedSubcontractor ? (
+              <Text style={[styles.pickerBtnText, { color: colors.foreground }]} numberOfLines={1}>
+                {selectedSubcontractor.label}
+              </Text>
+            ) : (
+              <Text style={[styles.pickerBtnText, { color: colors.muted }]}>Select subcontractor or crew…</Text>
+            )}
+            <IconSymbol name="chevron.right" size={16} color={colors.muted} />
+          </Pressable>
         </View>
 
         {/* Date */}
@@ -351,6 +366,24 @@ export default function NewDaySheetScreen() {
           textAlignVertical="top"
         />
 
+        {/* Cost Code Picker */}
+        <View style={{ gap: 6 }}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Cost Code</Text>
+          <Pressable
+            onPress={() => setCostCodePickerVisible(true)}
+            style={[styles.pickerBtn, { borderColor: selectedCostCode ? "#7F1F1F" : colors.border, backgroundColor: colors.surface }]}
+          >
+            {selectedCostCode ? (
+              <Text style={[styles.pickerBtnText, { color: colors.foreground }]} numberOfLines={1}>
+                {selectedCostCode}
+              </Text>
+            ) : (
+              <Text style={[styles.pickerBtnText, { color: colors.muted }]}>Select cost code…</Text>
+            )}
+            <IconSymbol name="chevron.right" size={16} color={colors.muted} />
+          </Pressable>
+        </View>
+
         {/* Site Photos */}
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Site Photos</Text>
         <Text style={[styles.photoSubtitle, { color: colors.muted }]}>
@@ -415,7 +448,60 @@ export default function NewDaySheetScreen() {
       </ScrollView>
 
       {/* Job Picker Modal */}
-      <Modal visible={jobPickerVisible} animationType="slide" presentationStyle="pageSheet">
+        <Modal visible={jobPickerVisible} animationType="slide" presentationStyle="pageSheet">
+        {/* Subcontractor Picker Modal */}
+        <Modal visible={subPickerVisible} animationType="slide" presentationStyle="pageSheet">
+          <View style={[styles.modal, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Select Subcontractor / Crew</Text>
+              <Pressable onPress={() => setSubPickerVisible(false)}>
+                <Text style={{ color: "#7F1F1F", fontSize: 16 }}>Cancel</Text>
+              </Pressable>
+            </View>
+            <FlatList
+              data={subcontractors}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => { setSelectedSubcontractor(item); setSubPickerVisible(false); }}
+                  style={[styles.modalItem, { borderBottomColor: colors.border }]}
+                >
+                  <Text style={[styles.modalItemText, { color: colors.foreground }]}>{item.label}</Text>
+                  {selectedSubcontractor?.id === item.id && (
+                    <IconSymbol name="checkmark" size={16} color="#7F1F1F" />
+                  )}
+                </Pressable>
+              )}
+            />
+          </View>
+        </Modal>
+
+        {/* Cost Code Picker Modal */}
+        <Modal visible={costCodePickerVisible} animationType="slide" presentationStyle="pageSheet">
+          <View style={[styles.modal, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Select Cost Code</Text>
+              <Pressable onPress={() => setCostCodePickerVisible(false)}>
+                <Text style={{ color: "#7F1F1F", fontSize: 16 }}>Cancel</Text>
+              </Pressable>
+            </View>
+            <FlatList
+              data={costCodes}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => { setSelectedCostCode(item); setCostCodePickerVisible(false); }}
+                  style={[styles.modalItem, { borderBottomColor: colors.border }]}
+                >
+                  <Text style={[styles.modalItemText, { color: colors.foreground }]}>{item}</Text>
+                  {selectedCostCode === item && (
+                    <IconSymbol name="checkmark" size={16} color="#7F1F1F" />
+                  )}
+                </Pressable>
+              )}
+            />
+          </View>
+        </Modal>
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { backgroundColor: "#7F1F1F" }]}>
             <Text style={styles.modalTitle}>Select Job</Text>
