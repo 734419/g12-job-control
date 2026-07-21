@@ -285,7 +285,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 52,
     height: 52,
-    tintColor: "#FFFFFF",
     borderRadius: 4,
   },
   headerTextBlock: {
