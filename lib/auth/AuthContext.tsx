@@ -61,14 +61,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isExpoGo = Constants.appOwnership === "expo";
 
   // Derive the Expo Go redirect URI dynamically from the manifest hostUri so it
-  // works regardless of which Manus sandbox is running.
+  // works regardless of which port Expo is running on.
   const hostUri: string =
     (Constants.expoConfig?.hostUri as string | undefined) ??
     (Constants.manifest2?.extra?.expoClient?.hostUri as string | undefined) ??
     "";
-  // Strip any trailing port from the hostUri — Expo Go uses the bare host
-  const expoGoHost = hostUri.replace(/:\d+$/, "");
-  const expoGoRedirectUri = expoGoHost ? `exp://${expoGoHost}` : AuthSession.makeRedirectUri();
+  // Keep the port — Expo Go redirect URIs must include it.
+  // Registered format: exp://localhost:8082/--/oauth/callback
+  const expoGoRedirectUri = hostUri
+    ? `exp://${hostUri}/--/oauth/callback`
+    : AuthSession.makeRedirectUri({ path: "--/oauth/callback" });
 
  const redirectUri = Platform.OS === "web"
     // Always use localhost for web — this is the URI registered in Entra ID.
