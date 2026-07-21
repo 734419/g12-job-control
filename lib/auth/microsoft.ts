@@ -20,7 +20,8 @@ import Constants from "expo-constants";
 WebBrowser.maybeCompleteAuthSession();
 
 const CLIENT_ID = process.env.EXPO_PUBLIC_AZURE_CLIENT_ID ?? "YOUR_CLIENT_ID";
-const TENANT_ID = process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "common";
+const CLIENT_ID = process.env.EXPO_PUBLIC_AZURE_CLIENT_ID ?? "97c26d33-4cbc-447d-86e9-bc0a8203ef66";
+const TENANT_ID = process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "32bd37cb-b07f-4787-9d46-11184f6962d6";
 
 const DISCOVERY: AuthSession.DiscoveryDocument = {
   authorizationEndpoint: `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize`,
