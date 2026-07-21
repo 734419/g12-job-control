@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { ScreenContainer } from "@/components/screen-container";
@@ -23,9 +23,11 @@ export default function LoginScreen() {
     >
       {/* Logo / Brand */}
       <View style={styles.logoContainer}>
-        <View style={[styles.logoCircle, { backgroundColor: "rgba(255,255,255,0.12)" }]}>
-          <Text style={styles.logoText}>ASR</Text>
-        </View>
+        <Image
+          source={require("@/assets/images/asr-logo.png")}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={styles.appTitle}>Job Control</Text>
         <Text style={styles.appSubtitle}>Field Operations Platform</Text>
       </View>
@@ -81,21 +83,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 48,
   },
-  logoCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    alignItems: "center",
-    justifyContent: "center",
+  logoImage: {
+    width: 160,
+    height: 160,
     marginBottom: 16,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  logoText: {
-    fontSize: 32,
-    fontFamily: "Montserrat_700Bold",
-    color: "#FFFFFF",
-    letterSpacing: 2,
   },
   appTitle: {
     fontSize: 28,
