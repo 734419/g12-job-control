@@ -70,8 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const expoGoHost = hostUri.replace(/:\d+$/, "");
   const expoGoRedirectUri = expoGoHost ? `exp://${expoGoHost}` : AuthSession.makeRedirectUri();
 
-  const redirectUri = Platform.OS === "web"
-    ? AuthSession.makeRedirectUri({ path: "oauth/callback" })
+ const redirectUri = Platform.OS === "web"
+    // Always use localhost for web — this is the URI registered in Entra ID.
+    // The sandbox tunnel URL changes every session and cannot be permanently registered.
+    ? "http://localhost:8081/oauth/callback"
     : isExpoGo
       ? expoGoRedirectUri
       : AuthSession.makeRedirectUri({ scheme: "manus20260626", path: "auth" });
