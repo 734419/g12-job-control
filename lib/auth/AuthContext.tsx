@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const request = buildAuthRequest(redirectUri);
-      const tenantId = process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "common";
+      const tenantId = process.env.EXPO_PUBLIC_AZURE_TENANT_ID ?? "32bd37cb-b07f-4787-9d46-11184f6962d6";
       const authEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`;
 
       if (Platform.OS === "web") {
