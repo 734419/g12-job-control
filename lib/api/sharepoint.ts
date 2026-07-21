@@ -1,30 +1,35 @@
 /**
  * SharePoint Graph API service for Ausslope Job Control.
  *
- * Site: https://ausslope.sharepoint.com/sites/ProjectControls
- * Site ID: ausslope.sharepoint.com,<SITE_GUID>,<WEB_GUID>
- *   Retrieve via: GET https://graph.microsoft.com/v1.0/sites/ausslope.sharepoint.com:/sites/ProjectControls
- *   Then set EXPO_PUBLIC_SHAREPOINT_SITE_ID in your .env file.
+ * PRIMARY SITE (Jobs, Workers): https://ausslope.sharepoint.com/sites/asr-operations2
+ *   Site ID: ausslope.sharepoint.com,aedb5034-4468-4dab-9b6e-94cf53db15be,b3103679-4573-4af6-9a4b-5d7d8bfebe12
+ *   Set EXPO_PUBLIC_SHAREPOINT_SITE_ID in your .env to override.
  *
- * Real SharePoint list names (verified via Graph API 2026-06-27):
- *   - "Job Register"          → Jobs
- *   - "Day Sheets"            → Day Sheets (created by app on first run if missing)
- *   - "Subcontractor Register" → Subcontractors
- *   - "Site Photos"           → Document library for photo uploads
+ * SECONDARY SITE (Day Sheets, Subcontractors, Site Photos):
+ *   https://ausslope.sharepoint.com/sites/ProjectControls
+ *   Site ID: ausslope.sharepoint.com,06c7be2e-83f7-4c3a-93fe-54f6542eaa01,b3103679-4573-4af6-9a4b-5d7d8bfebe12
+ *   Set EXPO_PUBLIC_SHAREPOINT_SECONDARY_SITE_ID in your .env to override.
  *
- * Column internal names (verified via Graph API):
- *   Job Register: Title, Job_x0020_Number*, Client, Site_x0020_Address, Job_x0020_Status,
- *                 Start_x0020_Date, Completion_x0020_Date, Contract_x0020_Value,
- *                 Project_x0020_Manager, Job_x0020_Type, Job_x0020_Description,
- *                 Superintendent, Priority, Jobcode
- *   Subcontractor Register: Title*, Company_x0020_Name*, Trade, Contact_x0020_Email,
- *                 Contact_x0020_Name, Contact_x0020_Phone, ABN, Insurance_x0020_Expiry,
- *                 Licence_x0020_Expiry, Licence_x0020_Number, Prequalification_x0020_Status
- *   Day Sheets: Title, Jobcode*, Worker_x0020_Name*, Worker_x0020_Email, Work_x0020_Date*,
- *               Start_x0020_Time, Finish_x0020_Time, Break_x0020_Minutes, Ordinary_x0020_Hours,
- *               Overtime_x0020_Hours, Allowances, Notes, Approval_x0020_Status,
- *               Approved_x0020_By, Approved_x0020_Date, Payroll_x0020_Export_x0020_Status,
- *               Xero_x0020_Reference, Site, Trade, Job_x0020_Name
+ * Real SharePoint list names (verified 2026-07-21 against live tenant):
+ *   - "Projects"              → Job Register (actual list name on asr-operations2)
+ *   - "Day Sheets"            → Day Sheets (to be created on ProjectControls)
+ *   - "Subcontractor Register" → Subcontractors (to be created on ProjectControls)
+ *   - "Site Photos"           → Document library for photo uploads (ProjectControls)
+ *
+ * Column internal names (verified 2026-07-21 against live tenant):
+ *   Projects list: Title (job name), JobNumber, ProjectType, State, Status,
+ *                  ContractValue, StartDate, CompletionDate, Client (Lookup),
+ *                  ProjectManager (Lookup)
+ *   Workers list:  Title, Person (User), EmployeeID, Position, WorkerType,
+ *                  StartDate, Status, Employer (Lookup)
+ *   Day Sheets:    Title, JobCode, WorkerName, WorkerEmail, WorkDate,
+ *                  StartTime, FinishTime, BreakMinutes, OrdinaryHours,
+ *                  OvertimeHours, Allowances, Notes, ApprovalStatus,
+ *                  ApprovedBy, ApprovedDate, PayrollExportStatus,
+ *                  XeroReference, Site, Trade, JobName
+ *   Subcontractor Register: Title, CompanyName, Trade, ContactEmail,
+ *                  ContactName, ContactPhone, ABN, InsuranceExpiry,
+ *                  LicenceExpiry, LicenceNumber, PrequalificationStatus
  *
  * M365 Group for role gating:
  *   "Ausslope Job Control" → AusslopeJobControl@ausslope.com.au
@@ -62,13 +67,16 @@ const DEMO_SUBCONTRACTORS: Subcontractor[] = [
 
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 const SITE_ID =
-  // Retrieve the real value via Graph API (see header comment) and set in .env
   process.env.EXPO_PUBLIC_SHAREPOINT_SITE_ID ??
-  "ausslope.sharepoint.com,REPLACE_SITE_GUID,REPLACE_WEB_GUID";
+  // Primary site: asr-operations2 (Jobs, Workers)
+  "ausslope.sharepoint.com,aedb5034-4468-4dab-9b6e-94cf53db15be,b3103679-4573-4af6-9a4b-5d7d8bfebe12";
+
+// Secondary site: ProjectControls (Day Sheets, Subcontractors, Site Photos)
+const SECONDARY_SITE_ID =
+  process.env.EXPO_PUBLIC_SHAREPOINT_SECONDARY_SITE_ID ??
+  "ausslope.sharepoint.com,06c7be2e-83f7-4c3a-93fe-54f6542eaa01,b3103679-4573-4af6-9a4b-5d7d8bfebe12";
 
 // M365 group email for Ausslope Job Control (supervisors/managers)
-// Fetched via Graph API: AusslopeJobControl@ausslope.com.au
-// Set EXPO_PUBLIC_SUPERVISORS_GROUP_EMAIL in your .env to override
 const G12_JOB_CONTROL_GROUP_EMAIL =
   process.env.EXPO_PUBLIC_SUPERVISORS_GROUP_EMAIL ??
   "AusslopeJobControl@ausslope.com.au";
@@ -175,9 +183,11 @@ async function graphFetch(path: string, options?: RequestInit): Promise<Response
 async function getListItems(
   listName: string,
   filter?: string,
-  orderBy?: string
+  orderBy?: string,
+  siteId?: string
 ): Promise<any[]> {
-  let url = `/sites/${SITE_ID}/lists/${encodeURIComponent(listName)}/items?expand=fields&$top=200`;
+  const site = siteId ?? SITE_ID;
+  let url = `/sites/${site}/lists/${encodeURIComponent(listName)}/items?expand=fields&$top=200`;
   if (filter) url += `&$filter=${encodeURIComponent(filter)}`;
   if (orderBy) url += `&$orderby=${encodeURIComponent(orderBy)}`;
   const res = await graphFetch(url);
@@ -186,9 +196,10 @@ async function getListItems(
   return data.value ?? [];
 }
 
-async function createListItem(listName: string, fields: Record<string, any>): Promise<any> {
+async function createListItem(listName: string, fields: Record<string, any>, siteId?: string): Promise<any> {
+  const site = siteId ?? SITE_ID;
   const res = await graphFetch(
-    `/sites/${SITE_ID}/lists/${encodeURIComponent(listName)}/items`,
+    `/sites/${site}/lists/${encodeURIComponent(listName)}/items`,
     { method: "POST", body: JSON.stringify({ fields }) }
   );
   if (!res.ok) {
@@ -201,10 +212,12 @@ async function createListItem(listName: string, fields: Record<string, any>): Pr
 async function updateListItem(
   listName: string,
   itemId: string,
-  fields: Record<string, any>
+  fields: Record<string, any>,
+  siteId?: string
 ): Promise<void> {
+  const site = siteId ?? SITE_ID;
   const res = await graphFetch(
-    `/sites/${SITE_ID}/lists/${encodeURIComponent(listName)}/items/${itemId}/fields`,
+    `/sites/${site}/lists/${encodeURIComponent(listName)}/items/${itemId}/fields`,
     { method: "PATCH", body: JSON.stringify(fields) }
   );
   if (!res.ok) {
@@ -243,26 +256,26 @@ function mapJob(raw: any): Job {
   const f = raw.fields ?? {};
   return {
     id: raw.id,
-    jobNumber: f.Job_x0020_Number ?? "",
-    jobCode: f.Jobcode ?? f.Job_x0020_Number ?? "",
+    jobNumber: f.JobNumber ?? "",
+    jobCode: f.JobNumber ?? "",
     jobName: f.Title ?? "",
-    client: f.Client ?? "",
-    siteAddress: f.Site_x0020_Address ?? "",
-    status: f.Job_x0020_Status ?? "Active",
-    startDate: f.Start_x0020_Date ?? "",
-    completionDate: f.Completion_x0020_Date ?? "",
-    contractValue: f.Contract_x0020_Value ?? "",
-    projectManager: f.Project_x0020_Manager ?? "",
-    superintendent: f.Superintendent ?? "",
-    jobType: f.Job_x0020_Type ?? "",
-    description: f.Job_x0020_Description ?? "",
+    client: f.ClientLookupValue ?? f.Client ?? "",
+    siteAddress: f.SiteAddress ?? f.Site_x0020_Address ?? "",
+    status: f.Status ?? "Active",
+    startDate: f.StartDate ?? "",
+    completionDate: f.CompletionDate ?? "",
+    contractValue: f.ContractValue != null ? `$${Number(f.ContractValue).toLocaleString()}` : "",
+    projectManager: f.ProjectManagerLookupValue ?? f.ProjectManager ?? "",
+    superintendent: f.SuperintendentLookupValue ?? f.Superintendent ?? "",
+    jobType: f.ProjectType ?? f.JobType ?? "",
+    description: f.Description ?? f.Job_x0020_Description ?? "",
     priority: f.Priority ?? "Normal",
   };
 }
 
 export async function getJobs(): Promise<Job[]> {
   try {
-    const items = await getListItems("Job Register", undefined, "fields/Job_x0020_Number asc");
+    const items = await getListItems("Projects", undefined, "fields/JobNumber asc");
     if (items.length === 0) return DEMO_JOBS;
     return items.map(mapJob);
   } catch {
@@ -276,7 +289,7 @@ export async function getJob(id: string): Promise<Job | null> {
   if (demo) return demo;
   try {
     const res = await graphFetch(
-      `/sites/${SITE_ID}/lists/${encodeURIComponent("Job Register")}/items/${id}?expand=fields`
+      `/sites/${SITE_ID}/lists/${encodeURIComponent("Projects")}/items/${id}?expand=fields`
     );
     if (!res.ok) return null;
     return mapJob(await res.json());
@@ -288,21 +301,15 @@ export async function getJob(id: string): Promise<Job | null> {
 export async function createJob(job: Omit<Job, "id">): Promise<Job> {
   const fields: Record<string, any> = {
     Title: job.jobName,
-    Job_x0020_Number: job.jobNumber,
-    Jobcode: job.jobCode,
-    Client: job.client,
-    Site_x0020_Address: job.siteAddress,
-    Job_x0020_Status: job.status,
-    Start_x0020_Date: job.startDate,
-    Completion_x0020_Date: job.completionDate,
-    Contract_x0020_Value: job.contractValue,
-    Project_x0020_Manager: job.projectManager,
-    Superintendent: job.superintendent,
-    Job_x0020_Type: job.jobType,
-    Job_x0020_Description: job.description,
+    JobNumber: job.jobNumber,
+    Status: job.status,
+    StartDate: job.startDate,
+    CompletionDate: job.completionDate,
+    ContractValue: parseFloat(job.contractValue.replace(/[^0-9.]/g, "")) || undefined,
+    ProjectType: job.jobType,
     Priority: job.priority,
   };
-  const raw = await createListItem("Job Register", fields);
+  const raw = await createListItem("Projects", fields);
   return mapJob(raw);
 }
 
@@ -312,24 +319,24 @@ function mapDaySheet(raw: any): DaySheet {
   const f = raw.fields ?? {};
   return {
     id: raw.id,
-    jobCode: f.Jobcode ?? "",
-    jobName: f.Job_x0020_Name ?? "",
-    workerName: f.Worker_x0020_Name ?? "",
-    workerEmail: f.Worker_x0020_Email ?? "",
-    date: f.Work_x0020_Date ?? "",
-    startTime: f.Start_x0020_Time ?? "",
-    finishTime: f.Finish_x0020_Time ?? "",
-    breakMinutes: Number(f.Break_x0020_Minutes ?? 0),
-    ordinaryHours: Number(f.Ordinary_x0020_Hours ?? 0),
-    overtimeHours: Number(f.Overtime_x0020_Hours ?? 0),
+    jobCode: f.JobCode ?? f.Jobcode ?? "",
+    jobName: f.JobName ?? f.Job_x0020_Name ?? "",
+    workerName: f.WorkerName ?? f.Worker_x0020_Name ?? "",
+    workerEmail: f.WorkerEmail ?? f.Worker_x0020_Email ?? "",
+    date: f.WorkDate ?? f.Work_x0020_Date ?? "",
+    startTime: f.StartTime ?? f.Start_x0020_Time ?? "",
+    finishTime: f.FinishTime ?? f.Finish_x0020_Time ?? "",
+    breakMinutes: Number(f.BreakMinutes ?? f.Break_x0020_Minutes ?? 0),
+    ordinaryHours: Number(f.OrdinaryHours ?? f.Ordinary_x0020_Hours ?? 0),
+    overtimeHours: Number(f.OvertimeHours ?? f.Overtime_x0020_Hours ?? 0),
     allowances: f.Allowances ?? "",
     notes: f.Notes ?? "",
-    approvalStatus: (f.Approval_x0020_Status as DaySheet["approvalStatus"]) ?? "Pending",
-    approvedBy: f.Approved_x0020_By ?? "",
-    approvedDate: f.Approved_x0020_Date ?? "",
+    approvalStatus: (f.ApprovalStatus ?? f.Approval_x0020_Status as DaySheet["approvalStatus"]) ?? "Pending",
+    approvedBy: f.ApprovedBy ?? f.Approved_x0020_By ?? "",
+    approvedDate: f.ApprovedDate ?? f.Approved_x0020_Date ?? "",
     payrollExportStatus:
-      (f.Payroll_x0020_Export_x0020_Status as DaySheet["payrollExportStatus"]) ?? "Not Exported",
-    xeroReference: f.Xero_x0020_Reference ?? "",
+      (f.PayrollExportStatus ?? f.Payroll_x0020_Export_x0020_Status as DaySheet["payrollExportStatus"]) ?? "Not Exported",
+    xeroReference: f.XeroReference ?? f.Xero_x0020_Reference ?? "",
     site: f.Site ?? "",
     trade: f.Trade ?? "",
   };
@@ -337,7 +344,7 @@ function mapDaySheet(raw: any): DaySheet {
 
 export async function getDaySheets(filter?: string): Promise<DaySheet[]> {
   try {
-    const items = await getListItems("Day Sheets", filter, "fields/Work_x0020_Date desc");
+    const items = await getListItems("Day Sheets", filter, "fields/WorkDate desc", SECONDARY_SITE_ID);
     if (items.length === 0) return DEMO_DAYSHEETS;
     return items.map(mapDaySheet);
   } catch {
@@ -350,42 +357,42 @@ export async function createDaySheet(
 ): Promise<DaySheet> {
   const fields: Record<string, any> = {
     Title: `${sheet.jobCode} - ${sheet.workerName} - ${sheet.date}`,
-    Jobcode: sheet.jobCode,
-    Job_x0020_Name: sheet.jobName,
-    Worker_x0020_Name: sheet.workerName,
-    Worker_x0020_Email: sheet.workerEmail,
-    Work_x0020_Date: sheet.date,
-    Start_x0020_Time: sheet.startTime,
-    Finish_x0020_Time: sheet.finishTime,
-    Break_x0020_Minutes: sheet.breakMinutes,
-    Ordinary_x0020_Hours: sheet.ordinaryHours,
-    Overtime_x0020_Hours: sheet.overtimeHours,
+    JobCode: sheet.jobCode,
+    JobName: sheet.jobName,
+    WorkerName: sheet.workerName,
+    WorkerEmail: sheet.workerEmail,
+    WorkDate: sheet.date,
+    StartTime: sheet.startTime,
+    FinishTime: sheet.finishTime,
+    BreakMinutes: sheet.breakMinutes,
+    OrdinaryHours: sheet.ordinaryHours,
+    OvertimeHours: sheet.overtimeHours,
     Allowances: sheet.allowances,
     Notes: sheet.notes,
-    Approval_x0020_Status: "Pending",
-    Payroll_x0020_Export_x0020_Status: "Not Exported",
+    ApprovalStatus: "Pending",
+    PayrollExportStatus: "Not Exported",
     Site: sheet.site,
     Trade: sheet.trade,
   };
-  const raw = await createListItem("Day Sheets", fields);
+  const raw = await createListItem("Day Sheets", fields, SECONDARY_SITE_ID);
   return mapDaySheet(raw);
 }
 
 export async function approveDaySheet(id: string, approvedBy: string): Promise<void> {
   await updateListItem("Day Sheets", id, {
-    Approval_x0020_Status: "Approved",
-    Approved_x0020_By: approvedBy,
-    Approved_x0020_Date: new Date().toISOString().split("T")[0],
-  });
+    ApprovalStatus: "Approved",
+    ApprovedBy: approvedBy,
+    ApprovedDate: new Date().toISOString().split("T")[0],
+  }, SECONDARY_SITE_ID);
 }
 
 export async function rejectDaySheet(id: string, approvedBy: string, reason?: string): Promise<void> {
   await updateListItem("Day Sheets", id, {
-    Approval_x0020_Status: "Rejected",
-    Approved_x0020_By: approvedBy,
-    Approved_x0020_Date: new Date().toISOString().split("T")[0],
+    ApprovalStatus: "Rejected",
+    ApprovedBy: approvedBy,
+    ApprovedDate: new Date().toISOString().split("T")[0],
     Notes: reason ? `REJECTED: ${reason}` : undefined,
-  });
+  }, SECONDARY_SITE_ID);
 }
 
 /**
@@ -411,9 +418,9 @@ export async function markDaySheetsExported(
           return;
         }
         await updateListItem("Day Sheets", id, {
-          Payroll_x0020_Export_x0020_Status: "Exported",
-          Xero_x0020_Reference: ref,
-        });
+          PayrollExportStatus: "Exported",
+          XeroReference: ref,
+        }, SECONDARY_SITE_ID);
         success++;
       } catch {
         failed++;
@@ -471,7 +478,7 @@ export async function uploadSitePhoto(
   const fileName = `${safeJobCode}_${safeName}_${date}_${timestamp}.jpg`;
 
   // Upload to Site Photos library
-  const uploadUrl = `/sites/${SITE_ID}/drives`;
+  const uploadUrl = `/sites/${SECONDARY_SITE_ID}/drives`;
   // First get the drive ID for Site Photos
   const drivesRes = await graphFetch(uploadUrl);
   if (!drivesRes.ok) throw new Error("Failed to get drives");
@@ -485,7 +492,7 @@ export async function uploadSitePhoto(
     uploadPath = `/drives/${sitePhotosDrive.id}/root:/${fileName}:/content`;
   } else {
     // Fallback: upload to default document library
-    uploadPath = `/sites/${SITE_ID}/drive/root:/${fileName}:/content`;
+    uploadPath = `/sites/${SECONDARY_SITE_ID}/drive/root:/${fileName}:/content`;
   }
 
   const binaryData = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
@@ -533,25 +540,25 @@ function mapSubcontractor(raw: any): Subcontractor {
   const f = raw.fields ?? {};
   return {
     id: raw.id,
-    companyName: f.Company_x0020_Name ?? f.Title ?? "",
+    companyName: f.CompanyName ?? f.Company_x0020_Name ?? f.Title ?? "",
     abn: f.ABN ?? "",
     trade: f.Trade ?? "",
-    contactName: f.Contact_x0020_Name ?? "",
-    contactPhone: f.Contact_x0020_Phone ?? "",
-    contactEmail: f.Contact_x0020_Email ?? "",
-    insuranceExpiry: f.Insurance_x0020_Expiry ?? "",
-    licenceExpiry: f.Licence_x0020_Expiry ?? "",
-    licenceNumber: f.Licence_x0020_Number ?? "",
-    prequalificationStatus: f.Prequalification_x0020_Status ?? "Not Started",
+    contactName: f.ContactName ?? f.Contact_x0020_Name ?? "",
+    contactPhone: f.ContactPhone ?? f.Contact_x0020_Phone ?? "",
+    contactEmail: f.ContactEmail ?? f.Contact_x0020_Email ?? "",
+    insuranceExpiry: f.InsuranceExpiry ?? f.Insurance_x0020_Expiry ?? "",
+    licenceExpiry: f.LicenceExpiry ?? f.Licence_x0020_Expiry ?? "",
+    licenceNumber: f.LicenceNumber ?? f.Licence_x0020_Number ?? "",
+    prequalificationStatus: f.PrequalificationStatus ?? f.Prequalification_x0020_Status ?? "Not Started",
     complianceStatus: calcComplianceStatus(
-      f.Insurance_x0020_Expiry ?? "",
-      f.Licence_x0020_Expiry ?? ""
+      f.InsuranceExpiry ?? f.Insurance_x0020_Expiry ?? "",
+      f.LicenceExpiry ?? f.Licence_x0020_Expiry ?? ""
     ),
     // Legacy/UI fields - not in SharePoint, managed locally or via future columns
-    inductionStatus: (f.Induction_x0020_Status as Subcontractor["inductionStatus"]) ?? "Not Started",
-    swmsStatus: (f.SWMS_x0020_Status as Subcontractor["swmsStatus"]) ?? "Not Submitted",
-    mobilisationApproved: f.Mobilisation_x0020_Approved === true || f.Mobilisation_x0020_Approved === "Yes",
-    activeJobCodes: (f.Active_x0020_Job_x0020_Codes ?? "").split(";").map((s: string) => s.trim()).filter(Boolean),
+    inductionStatus: (f.InductionStatus ?? f.Induction_x0020_Status as Subcontractor["inductionStatus"]) ?? "Not Started",
+    swmsStatus: (f.SWMSStatus ?? f.SWMS_x0020_Status as Subcontractor["swmsStatus"]) ?? "Not Submitted",
+    mobilisationApproved: f.MobilisationApproved === true || f.MobilisationApproved === "Yes" || f.Mobilisation_x0020_Approved === true || f.Mobilisation_x0020_Approved === "Yes",
+    activeJobCodes: (f.ActiveJobCodes ?? f.Active_x0020_Job_x0020_Codes ?? "").split(";").map((s: string) => s.trim()).filter(Boolean),
     notes: f.Notes ?? "",
   };
 }
@@ -561,7 +568,8 @@ export async function getSubcontractors(): Promise<Subcontractor[]> {
     const items = await getListItems(
       "Subcontractor Register",
       undefined,
-      "fields/Company_x0020_Name asc"
+      "fields/CompanyName asc",
+      SECONDARY_SITE_ID
     );
     if (items.length === 0) return DEMO_SUBCONTRACTORS;
     return items.map(mapSubcontractor);
@@ -576,7 +584,7 @@ export async function getSubcontractor(id: string): Promise<Subcontractor | null
   if (demo) return demo;
   try {
     const res = await graphFetch(
-      `/sites/${SITE_ID}/lists/${encodeURIComponent("Subcontractor Register")}/items/${id}?expand=fields`
+      `/sites/${SECONDARY_SITE_ID}/lists/${encodeURIComponent("Subcontractor Register")}/items/${id}?expand=fields`
     );
     if (!res.ok) return null;
     return mapSubcontractor(await res.json());
@@ -590,18 +598,18 @@ export async function createSubcontractor(
 ): Promise<Subcontractor> {
   const fields: Record<string, any> = {
     Title: sub.companyName,
-    Company_x0020_Name: sub.companyName,
+    CompanyName: sub.companyName,
     ABN: sub.abn,
     Trade: sub.trade,
-    Contact_x0020_Name: sub.contactName,
-    Contact_x0020_Phone: sub.contactPhone,
-    Contact_x0020_Email: sub.contactEmail,
-    Insurance_x0020_Expiry: sub.insuranceExpiry,
-    Licence_x0020_Expiry: sub.licenceExpiry,
-    Licence_x0020_Number: sub.licenceNumber,
-    Prequalification_x0020_Status: sub.prequalificationStatus,
+    ContactName: sub.contactName,
+    ContactPhone: sub.contactPhone,
+    ContactEmail: sub.contactEmail,
+    InsuranceExpiry: sub.insuranceExpiry,
+    LicenceExpiry: sub.licenceExpiry,
+    LicenceNumber: sub.licenceNumber,
+    PrequalificationStatus: sub.prequalificationStatus,
   };
-  const raw = await createListItem("Subcontractor Register", fields);
+  const raw = await createListItem("Subcontractor Register", fields, SECONDARY_SITE_ID);
   return mapSubcontractor(raw);
 }
 
@@ -610,8 +618,8 @@ export async function updateSubcontractorMobilisation(
   approved: boolean
 ): Promise<void> {
   await updateListItem("Subcontractor Register", id, {
-    Mobilisation_x0020_Approved: approved ? "Yes" : "No",
-  });
+    MobilisationApproved: approved ? "Yes" : "No",
+  }, SECONDARY_SITE_ID);
 }
 
 export async function updateSubcontractorPrequal(
@@ -619,6 +627,6 @@ export async function updateSubcontractorPrequal(
   status: string
 ): Promise<void> {
   await updateListItem("Subcontractor Register", id, {
-    Prequalification_x0020_Status: status,
-  });
+    PrequalificationStatus: status,
+  }, SECONDARY_SITE_ID);
 }
